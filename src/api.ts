@@ -86,21 +86,17 @@ const REQUEST_TIMEOUT_MS = 20000;
 interface HttpOptions {
   origin: string;
   getToken: () => string | undefined;
-  refreshToken: () => Promise<unknown>;
+  /** Mints a fresh block token and returns it. */
+  refreshToken: () => Promise<{ raw?: string } | undefined>;
 }
 
+const RATE_LIMIT_RETRIES = 3;
+
 export function createHttpClient({ origin, getToken, refreshToken }: HttpOptions): ApiClient {
-  async function request<T>(path: string, query: Record<string, string | number | undefined>,
-    signal?: AbortSignal, retried = false): Promise<T> {
-    const url = new URL(path, origin);
-    for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined && value !== '') url.searchParams.set(key, String(value));
-    }
-    const token = getToken();
+  async function attempt(url: URL, token: string | undefined, signal?: AbortSignal): Promise<Response> {
     const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
-    let response: Response;
     try {
-      response = await fetch(url, {
+      return await fetch(url, {
         headers: { Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       });
@@ -108,19 +104,38 @@ export function createHttpClient({ origin, getToken, refreshToken }: HttpOptions
       if (signal?.aborted) throw error;
       throw new ApiError(0, timeout.aborted ? 'Civitai took too long to answer.' : 'Could not reach Civitai.');
     }
-    if (response.ok) {
-      try {
-        return (await response.json()) as T;
-      } catch {
-        throw new ApiError(response.status, 'Civitai sent an unexpected answer.');
+  }
+
+  async function request<T>(path: string, query: Record<string, string | number | undefined>,
+    signal?: AbortSignal): Promise<T> {
+    const url = new URL(path, origin);
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== '') url.searchParams.set(key, String(value));
+    }
+    let token = getToken();
+    let refreshed = false;
+    for (let tries = 0; ; tries++) {
+      const response = await attempt(url, token, signal);
+      if (response.ok) {
+        try {
+          return (await response.json()) as T;
+        } catch {
+          throw new ApiError(response.status, 'Civitai sent an unexpected answer.');
+        }
       }
+      // The block token is short-lived; a 401 usually means it just expired. The
+      // retry uses the token the refresh returned, not whatever React holds yet.
+      if (response.status === 401 && !refreshed) {
+        refreshed = true;
+        const fresh = await refreshToken().catch(() => undefined);
+        if (signal?.aborted) throw signal.reason;
+        token = fresh?.raw || getToken();
+        continue;
+      }
+      const error = await toError(response);
+      if (error.status !== 429 || tries >= RATE_LIMIT_RETRIES) throw error;
+      await sleep(error.retryAfterMs ?? 2000 * (tries + 1), signal);
     }
-    // The block token is short-lived; a 401 usually means it just expired.
-    if (response.status === 401 && !retried) {
-      await refreshToken().catch(() => {});
-      return request<T>(path, query, signal, true);
-    }
-    throw await toError(response);
   }
 
   return {
@@ -129,6 +144,15 @@ export function createHttpClient({ origin, getToken, refreshToken }: HttpOptions
     getPage: (id, cursor, signal) => request<CollectionPage>(`/api/v1/blocks/collections/${id}`,
       { limit: PAGE_SIZE, cursor }, signal),
   };
+}
+
+/** Retry-After as delta-seconds or an HTTP date, in ms; undefined when absent or unreadable. */
+export function parseRetryAfter(value: string | null): number | undefined {
+  if (!value?.trim()) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.min(60000, Math.max(0, seconds * 1000));
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.min(60000, Math.max(0, date - Date.now())) : undefined;
 }
 
 async function toError(response: Response): Promise<ApiError> {
@@ -147,44 +171,60 @@ async function toError(response: Response): Promise<ApiError> {
       return new ApiError(403, message || 'Civitai refused this app access to collections.');
     case 404:
       return new ApiError(404, 'That collection does not exist, or it is private. This app reads public collections and your own public ones.');
-    case 429: {
-      const seconds = Number(response.headers.get('Retry-After'));
-      return new ApiError(429, 'Civitai asked the app to slow down.',
-        Number.isFinite(seconds) ? seconds * 1000 : undefined);
-    }
+    case 429:
+      return new ApiError(429, 'Civitai asked the app to slow down. Try again in a moment.',
+        parseRetryAfter(response.headers.get('Retry-After')));
     default:
       return new ApiError(response.status, message || `Civitai answered with an error (${response.status}).`);
   }
 }
 
-const sleep = (ms: number, signal?: AbortSignal) => new Promise<void>((resolve, reject) => {
-  const timer = setTimeout(resolve, ms);
-  signal?.addEventListener('abort', () => { clearTimeout(timer); reject(signal.reason); }, { once: true });
-});
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const onAbort = () => { clearTimeout(timer); reject(signal!.reason); };
+    const timer = setTimeout(() => { signal?.removeEventListener('abort', onAbort); resolve(); }, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
 
-/** Every one of the viewer's own collections, sorted by name. */
-export async function readMyCollections(api: ApiClient): Promise<CollectionSummary[]> {
+const MAX_LIST_PAGES = 50;
+
+/**
+ * Every one of the viewer's own collections, sorted by name. `complete` is false
+ * when the page cap was reached or the cursor stopped moving.
+ */
+export async function readMyCollections(api: ApiClient, signal?: AbortSignal):
+  Promise<{ collections: CollectionSummary[]; complete: boolean }> {
   const found = new Map<number, CollectionSummary>();
+  const seen = new Set<string>();
   let cursor: string | undefined;
-  for (let page = 0; page < 20; page++) {
+  let complete = false;
+  for (let page = 0; page < MAX_LIST_PAGES; page++) {
     const result = await api.listMine(cursor);
+    if (signal?.aborted) throw signal.reason;
     for (const item of result.items ?? []) found.set(item.id, item);
-    if (result.nextCursor == null || String(result.nextCursor) === cursor) break;
-    cursor = String(result.nextCursor);
+    if (result.nextCursor == null) { complete = true; break; }
+    const next = String(result.nextCursor);
+    if (seen.has(next)) break;
+    seen.add(next);
+    cursor = next;
   }
-  return [...found.values()].sort((a, b) => a.name.localeCompare(b.name));
+  return { collections: [...found.values()].sort((a, b) => a.name.localeCompare(b.name)), complete };
 }
 
 export interface CollectionRead {
   collection: CollectionDetail;
   items: MediaItem[];
-  truncated: boolean;
+  /** False when the page cap was reached or Civitai repeated a cursor: not the whole collection. */
+  complete: boolean;
   fetchedAt: Date;
 }
 
 /**
- * The whole collection, newest added first. A missing or repeated cursor ends the
- * read; the page cap bounds the rest. Rate limits are waited out a few times.
+ * The whole collection, newest added first. A missing cursor ends the read; a
+ * repeated one or the page cap ends it incomplete. Rate limits are waited out
+ * inside the client.
  */
 export async function readCollection(api: ApiClient, id: number,
   { signal, onProgress }: { signal?: AbortSignal; onProgress?: (count: number) => void } = {}): Promise<CollectionRead> {
@@ -192,27 +232,21 @@ export async function readCollection(api: ApiClient, id: number,
   const seen = new Set<string>();
   let collection: CollectionDetail | null = null;
   let cursor: string | undefined;
+  const done = (complete: boolean): CollectionRead =>
+    ({ collection: collection!, items: [...items.values()], complete, fetchedAt: new Date() });
   for (let page = 0; page < MAX_PAGES; page++) {
-    let result: CollectionPage | null = null;
-    for (let attempt = 0; !result; attempt++) {
-      try {
-        result = await api.getPage(id, cursor, signal);
-      } catch (error) {
-        if (!(error instanceof ApiError) || error.status !== 429 || attempt >= 3) throw error;
-        await sleep(error.retryAfterMs ?? 2000 * (attempt + 1), signal);
-      }
-    }
+    const result = await api.getPage(id, cursor, signal);
+    if (signal?.aborted) throw signal.reason;
     collection ??= result.collection;
     for (const item of result.items ?? []) if (!items.has(item.mediaId)) items.set(item.mediaId, item);
     onProgress?.(items.size);
-    const next = result.nextCursor == null ? null : String(result.nextCursor);
-    if (next === null || seen.has(next)) {
-      return { collection, items: [...items.values()], truncated: false, fetchedAt: new Date() };
-    }
+    if (result.nextCursor == null) return done(true);
+    const next = String(result.nextCursor);
+    if (seen.has(next)) return done(false);
     seen.add(next);
     cursor = next;
   }
-  return { collection: collection!, items: [...items.values()], truncated: true, fetchedAt: new Date() };
+  return done(false);
 }
 
 /** A collection id from a number or a civitai.com collection link. */

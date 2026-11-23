@@ -12,7 +12,8 @@ const TOP_CREATORS = 20;
 const CREATOR_THUMBS = 36;
 const percent = (share: number) => `${(share * 100).toFixed(1)}%`;
 
-export function RecentPicks({ analysis, onCreator }: { analysis: Analysis; onCreator: (key: string) => void }) {
+export function RecentPicks({ analysis, complete, onCreator }:
+  { analysis: Analysis; complete: boolean; onCreator: (key: string) => void }) {
   return (
     <Card className="ca-card">
       <SectionTitle note="Newest first, with how long since that creator's previous pick.">Recently added</SectionTitle>
@@ -28,7 +29,7 @@ export function RecentPicks({ analysis, onCreator }: { analysis: Analysis; onCre
                 <button type="button" className="ca-link ca-strong" onClick={() => onCreator(creator.key)}>{creator.name}</button>
                 <small className={gap !== null && gap <= RECENT ? 'ca-accent' : 'ca-dimmed'}>
                   {gap === null
-                    ? creator.items.length === 1 ? 'First from this creator' : `First from them · ${creator.items.length} in all`
+                    ? `${complete ? 'First from them' : 'First from them in the items read'}${creator.items.length === 1 ? '' : ` · ${creator.items.length} in all`}`
                     : `Previous from them ${plural(gap, 'addition')} earlier · ${creator.items.length} in all`}
                 </small>
               </div>
@@ -61,6 +62,7 @@ export function TopCreators({ analysis, selected, onCreator }:
               <span className="ca-bar-name">{creator.name}</span>
               <span className="ca-bar-track"><span style={{ width: `${(creator.items.length / max) * 100}%` }} /></span>
               <span className="ca-bar-value">{creator.items.length.toLocaleString()}</span>
+              <span className="ca-bar-last">{creator.items[0].index === 0 ? 'latest' : `${creator.items[0].index.toLocaleString()} ago`}</span>
             </button>
           </li>
         ))}

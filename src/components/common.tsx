@@ -5,13 +5,14 @@ import { useCivitaiNavigate } from '@civitai/blocks-react';
 import { thumbUrl, type Entry } from '../analysis.js';
 
 // A sandboxed frame cannot open links itself, so every link to Civitai goes
-// through the host, in a new tab.
+// through the host, in a new tab. `scope: 'site'` is what makes the path a
+// civitai.com page; without it the host reads it as a path inside this app.
 type Open = (path: string) => void;
 const OpenContext = createContext<Open>(() => {});
 
 export function OpenProvider({ children }: { children: ReactNode }) {
   const { navigate } = useCivitaiNavigate();
-  return <OpenContext.Provider value={path => navigate(path, 'new_tab')}>{children}</OpenContext.Provider>;
+  return <OpenContext.Provider value={path => navigate(path, { scope: 'site', target: 'new_tab' })}>{children}</OpenContext.Provider>;
 }
 
 export const useOpen = () => useContext(OpenContext);

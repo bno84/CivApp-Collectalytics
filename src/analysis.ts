@@ -157,7 +157,7 @@ export function escapeHTML(value: string): string {
 export function snippet({ title, lines, heading }: SnippetSettings, values: Record<string, string>, url: string) {
   const fill = (text: string, html: boolean) => text.split(/(\{\w+\})/).map(part => {
     const name = part.match(/^\{(\w+)\}$/)?.[1];
-    if (!name || !(name in values)) return html ? escapeHTML(part) : part;
+    if (!name || !Object.hasOwn(values, name)) return html ? escapeHTML(part) : part;
     if (!html) return values[name];
     return name === 'noun' ? escapeHTML(values[name]) : `<strong>${escapeHTML(values[name])}</strong>`;
   }).join('');

@@ -360,7 +360,7 @@ button:focus-visible,
 
 .ca-bar-row {
   display: grid;
-  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) 3rem;
+  grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) 3rem 5rem;
   align-items: center;
   gap: 0.5rem;
   width: 100%;
@@ -405,10 +405,15 @@ button:focus-visible,
   background: var(--ca-primary);
 }
 
-.ca-bar-value {
+.ca-bar-value,
+.ca-bar-last {
   color: var(--ca-dimmed);
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+.ca-bar-last {
+  font-size: 0.75rem;
 }
 
 /* -- creator check ------------------------------------------------------------- */

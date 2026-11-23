@@ -15,7 +15,7 @@ const LEFT = 32;
  * Discovery's items-per-day chart: Civitai's app API gives the order items were
  * added in but not when.
  */
-export function AdditionsChart({ analysis }: { analysis: Analysis }) {
+export function AdditionsChart({ analysis, complete }: { analysis: Analysis; complete: boolean }) {
   const total = analysis.items.length;
   const size = blockSize(total);
   const rows = useMemo(() => blocks(analysis, size), [analysis, size]);
@@ -52,6 +52,7 @@ export function AdditionsChart({ analysis }: { analysis: Analysis }) {
   return (
     <Card className="ca-card">
       <SectionTitle note={`Oldest additions on the left, in blocks of ${size.toLocaleString()}. ` +
+        (complete ? '' : `Only the ${total.toLocaleString()} most recent additions were read, so "new" means new among those. `) +
         (busiest ? `Most new names: ${label(busiest).toLowerCase()}, with ${plural(busiest.newCreators, 'new creator')}.` : '')}>
         New creators over the collection's life
       </SectionTitle>

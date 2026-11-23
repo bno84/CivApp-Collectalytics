@@ -105,3 +105,10 @@ describe('thumbUrl', () => {
     expect(thumbUrl(null, 'image')).toBeNull();
   });
 });
+
+describe('snippet placeholders', () => {
+  it('ignores inherited names such as {constructor}', () => {
+    expect(snippet({ title: 'x', lines: '{constructor} {toString}', heading: 'p' }, {}, 'https://civitai.com/collections/1').text)
+      .toBe('x\n{constructor} {toString}');
+  });
+});

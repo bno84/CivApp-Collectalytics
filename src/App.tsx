@@ -60,14 +60,20 @@ export function App({ api }: { api: ApiClient }) {
 
 function Collectalytics({ api }: { api: ApiClient }) {
   const [mine, setMine] = useState<CollectionSummary[] | null>(null);
+  const [mineComplete, setMineComplete] = useState(true);
   const [mineError, setMineError] = useState<string | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [linkText, setLinkText] = useState('');
   const [report, setReport] = useState<Report>({ status: 'idle' });
   const [creatorKey, setCreatorKey] = useState<string | null>(null);
   const reading = useRef<AbortController | null>(null);
+  const listing = useRef<AbortController | null>(null);
+  // Set once the viewer (or the first load) has opened something, so a list
+  // that finishes late never replaces their choice.
+  const chosen = useRef(false);
 
   const open = useCallback(async (id: number) => {
+    chosen.current = true;
     reading.current?.abort();
     const controller = new AbortController();
     reading.current = controller;
@@ -76,7 +82,7 @@ function Collectalytics({ api }: { api: ApiClient }) {
     try {
       const data = await readCollection(api, id, {
         signal: controller.signal,
-        onProgress: read => setReport({ status: 'loading', id, read }),
+        onProgress: read => { if (!controller.signal.aborted) setReport({ status: 'loading', id, read }); },
       });
       if (controller.signal.aborted) return;
       const analysis = analyse(data.items);
@@ -90,22 +96,30 @@ function Collectalytics({ api }: { api: ApiClient }) {
   }, [api]);
 
   const loadMine = useCallback(async () => {
+    listing.current?.abort();
+    const controller = new AbortController();
+    listing.current = controller;
     setMineError(null);
     try {
-      const list = await readMyCollections(api);
-      setMine(list);
-      return list;
+      const { collections, complete } = await readMyCollections(api, controller.signal);
+      if (controller.signal.aborted) return;
+      setMine(collections);
+      setMineComplete(complete);
+      if (!chosen.current && collections[0]) open(collections[0].id);
     } catch (error) {
+      if (controller.signal.aborted) return;
       setMine([]);
       setMineError(error instanceof Error ? error.message : String(error));
-      return [];
     }
-  }, [api]);
+  }, [api, open]);
 
   useEffect(() => {
-    loadMine().then(list => { if (list[0]) open(list[0].id); });
-    return () => reading.current?.abort();
-  }, [loadMine, open]);
+    loadMine();
+    return () => {
+      listing.current?.abort();
+      reading.current?.abort();
+    };
+  }, [loadMine]);
 
   const linkId = parseCollectionRef(linkText);
   const options = useMemo(() => {
@@ -140,6 +154,9 @@ function Collectalytics({ api }: { api: ApiClient }) {
           </form>
         </div>
         {mineError && <Alert color="error" title="Could not list your collections">{mineError}</Alert>}
+        {!mineComplete && (
+          <p className="ca-dimmed">Civitai stopped listing your collections early; some may be missing. Open one by link instead.</p>
+        )}
         {mine && !mine.length && !mineError && (
           <p className="ca-dimmed">
             You have no public collections of your own. Collections you follow are not listed to apps;
@@ -210,16 +227,17 @@ function ReportView({ data, analysis, creatorKey, onCreator, onRefresh }: {
         </div>
         <p className="ca-dimmed ca-footnote">
           {plural(items.length, 'accepted item')} read at {data.fetchedAt.toLocaleTimeString(undefined, { timeStyle: 'short' })}.
-          {data.truncated && ' This collection is larger than the app reads at once, so only the 10,000 most recent items are counted.'}
-          {' '}Counts cover images and videos you can view on this site; Civitai does not give apps the date each was added, so recency is measured in additions.
+          {!data.complete && ' Civitai did not hand over the whole collection, so only the most recently added items read are counted.'}
+          {' '}Counts cover images and videos you can view on this site. Civitai does not give apps the date each was added, so recency is
+          measured in additions, newest first. Contest collections are served shuffled, so for those the order-based figures do not apply.
         </p>
       </Card>
 
       {items.length > 0 ? (
         <>
-          <AdditionsChart key={collection.id} analysis={analysis} />
+          <AdditionsChart key={collection.id} analysis={analysis} complete={data.complete} />
           <div className="ca-columns">
-            <RecentPicks analysis={analysis} onCreator={pickCreator} />
+            <RecentPicks analysis={analysis} complete={data.complete} onCreator={pickCreator} />
             <TopCreators analysis={analysis} selected={creatorKey} onCreator={pickCreator} />
           </div>
           <CreatorLookup key={collection.id} analysis={analysis} selected={creatorKey} onCreator={onCreator} />
@@ -227,7 +245,7 @@ function ReportView({ data, analysis, creatorKey, onCreator, onRefresh }: {
       ) : (
         <Alert color="info">Nothing in this collection is visible to you here yet.</Alert>
       )}
-      <SnippetEditor name={collection.name} url={`https://civitai.com/collections/${collection.id}`} values={values} />
+      <SnippetEditor collectionId={collection.id} name={collection.name} url={`https://civitai.com/collections/${collection.id}`} values={values} />
     </Stack>
   );
 }

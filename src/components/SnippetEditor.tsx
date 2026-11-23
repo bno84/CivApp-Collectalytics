@@ -3,7 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Group, Select, TextInput, Textarea } from '@civitai/blocks-react/ui';
 
 import { DEFAULT_LINES, collectionTitle, snippet, type Heading, type SnippetSettings } from '../analysis.js';
-import { SectionTitle } from './common.js';
+import { SectionTitle, useOpen } from './common.js';
+
+// Edits by collection id, for the rest of the visit: they survive a refresh or
+// switching collections, not a reload.
+const edits = new Map<number, SnippetSettings>();
 
 const HEADINGS = [
   { value: 'h2', label: 'Heading' },
@@ -16,15 +20,23 @@ const HEADINGS = [
  * for the visit: the sandboxed frame has no storage of its own, and keeping them
  * on Civitai would need the storage scope this app does not ask for.
  */
-export function SnippetEditor({ name, url, values }: { name: string; url: string; values: Record<string, string> }) {
+export function SnippetEditor({ collectionId, name, url, values }:
+  { collectionId: number; name: string; url: string; values: Record<string, string> }) {
+  const open = useOpen();
   const defaults = useMemo<SnippetSettings>(() => ({ title: collectionTitle(name), lines: DEFAULT_LINES, heading: 'h2' }), [name]);
-  const [settings, setSettings] = useState(defaults);
+  const [settings, setSettings] = useState(() => edits.get(collectionId) ?? defaults);
   const [status, setStatus] = useState<{ text: string; error?: boolean } | null>(null);
   const preview = useRef<HTMLDivElement>(null);
-  useEffect(() => setSettings(defaults), [defaults]);
+  useEffect(() => setSettings(edits.get(collectionId) ?? defaults), [collectionId, defaults]);
 
   const { html, text } = snippet(settings, values, url);
-  const update = (patch: Partial<SnippetSettings>) => { setSettings(current => ({ ...current, ...patch })); setStatus(null); };
+  const save = (next: SnippetSettings) => {
+    setSettings(next);
+    setStatus(null);
+    if (next.title === defaults.title && next.lines === defaults.lines && next.heading === defaults.heading) edits.delete(collectionId);
+    else edits.set(collectionId, next);
+  };
+  const update = (patch: Partial<SnippetSettings>) => save({ ...settings, ...patch });
 
   async function copy(rich: boolean) {
     const done = (ok: boolean) => setStatus(ok
@@ -58,12 +70,19 @@ export function SnippetEditor({ name, url, values }: { name: string; url: string
           <TextInput label="Title" value={settings.title} onChange={event => update({ title: event.currentTarget.value })} />
           <Textarea label="Lines" minRows={3} value={settings.lines} onChange={event => update({ lines: event.currentTarget.value })} />
           <Select label="Title style" value={settings.heading} options={HEADINGS} onChange={value => update({ heading: value as Heading })} />
-          <Button variant="subtle" size="sm" onClick={() => { setSettings(defaults); setStatus(null); }}>Reset</Button>
+          <Button variant="subtle" size="sm" onClick={() => save(defaults)}>Reset</Button>
         </div>
         <div className="ca-snippet-out">
           <span className="ca-label">Preview</span>
           {/* Every typed character is escaped by snippet(); the tags are a fixed set. */}
-          <div className="ca-snippet-preview" ref={preview} dangerouslySetInnerHTML={{ __html: html }} />
+          <div className="ca-snippet-preview" ref={preview} dangerouslySetInnerHTML={{ __html: html }}
+            onClick={event => {
+              // The copied HTML keeps its plain link; in the frame it opens through the host.
+              const link = (event.target as Element).closest('a');
+              if (!link) return;
+              event.preventDefault();
+              open(new URL(link.href).pathname);
+            }} />
           <Group gap="0.5rem">
             <Button onClick={() => copy(true)}>Copy for Civitai</Button>
             <Button variant="light" onClick={() => copy(false)}>Copy HTML</Button>
