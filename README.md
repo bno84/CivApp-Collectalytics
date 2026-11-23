@@ -18,16 +18,34 @@ snippet to paste into Civitai. It is a port of the Collectalytics tab of
   typical gap between their picks, and a timeline of where their items sit.
 - **Stats snippet:** a heading and lines with placeholders, rendered as HTML
   that Civitai's editors accept, with buttons to copy it as rich text or HTML.
+  Edits are kept per collection for the next visit.
+- **Opened before:** the last 8 public collections opened by link, to open
+  again in one click or forget.
 
 Links open on Civitai in a new tab through the host.
 
 ## Permissions
 
-`collections:read:self` only. It is consent-exempt, so viewers get no consent
-prompt. It reaches:
+`collections:read:self` and `apps:storage`. Both are consent-exempt, so viewers
+get no consent prompt.
+
+`collections:read:self` reaches:
 
 - `GET /api/v1/blocks/collections?mode=mine`: the viewer's own collections.
 - `GET /api/v1/blocks/collections/{id}`: any public collection, page by page.
+
+`apps:storage` reaches two **private** collections of Civitai's document store,
+declared under `storage` in the manifest. Only the viewer who wrote them can
+read them:
+
+- `snippets`: an edited stats snippet, keyed `c-<collectionId>`. Reset deletes it.
+- `recent_collections`: collections opened by link (id, name, curator), keyed
+  `c-<collectionId>`, newest first by `updatedAt`, pruned to 8.
+
+The store works only once the app is approved. Before that, and in a dev-tunnel
+preview, the server refuses it, and the app keeps both for the visit only.
+Collection names allow only `[a-z0-9_]`. Renaming one, or changing its
+visibility, starts it empty.
 
 ## Differences from Discovery
 
@@ -43,10 +61,15 @@ API, which changes what can be counted:
 | Follower count, total video length | Not shown | Not in the block API |
 | Review queue, accept with a thanks comment | Not ported | No app scope can accept collection items or post comments |
 | Image detail dialog | Opens the image on Civitai | Preferred: Civitai's own image page |
-| Snippet edits and last-opened collection remembered | Kept for the visit only | The sandboxed frame has no storage; keeping them on Civitai would need the `apps:storage` scope |
+| Snippet edits and last-opened collection remembered | Snippet edits remembered; collections opened by link listed under "Opened before" | Kept in the viewer's private app storage on Civitai. The app does not reopen the last collection by itself |
 
-Contest-mode collections are out of scope: Civitai serves them shuffled, so
-order-based figures do not apply.
+Contest-mode collections open like any other, as a known quirk. Civitai serves
+them shuffled, so order-based figures (recent picks, "additions ago") do not
+reflect when items were added. Supporting them properly is out of scope, but
+the app does not stop anyone from looking.
+
+A model, post or article collection reads as empty, and the report says those
+collection types are not supported yet.
 
 What Civitai would need to add to close these gaps is in
 [docs/upstream-wishlist.md](docs/upstream-wishlist.md).
@@ -58,12 +81,18 @@ What Civitai would need to add to close these gaps is in
   Reads up to 10,000 items (100 pages of 100).
 - `src/analysis.ts`: all counting, free of React, tested in
   `src/analysis.test.ts`.
+- `src/memory.ts`: what the app remembers between visits, over the document
+  store from `@civitai/sdk`, tested against `createFakeStorage` in
+  `src/memory.test.ts`. It runs on the block token from `blocks-react`, not on
+  `initialize()`'s own handshake, so the frame keeps one host bridge. Every
+  refusal falls back to memory for the visit.
 - `src/App.tsx` and `src/components/`: UI built from `@civitai/blocks-react`
   (host handshake, theme, sizing, sign-in, navigation) and its design-system
   pack `@civitai/blocks-react/ui`. Styling in `src/index.css` uses the pack's
   `--civitai-*` tokens, so light and dark follow the host.
-- `src/dev/harness.tsx`: the SDK mock host plus sample collections, for
-  `pnpm run dev:harness`. Imported only in development builds.
+- `src/dev/harness.tsx`: the SDK mock host plus sample collections and an
+  in-memory document store, for `pnpm run dev:harness`. Imported only in
+  development builds.
 
 ## Width-adaptive layout (`src/index.css`)
 
@@ -87,7 +116,7 @@ installs strictly from it, and `buildCommand` stays `pnpm run build` to match.
 ```bash
 pnpm install
 pnpm run dev:harness   # http://localhost:5186, mock host + sample collections
-pnpm test              # unit tests for the counting
+pnpm test              # unit tests for the counting, the API client and memory
 pnpm run build         # type check + production bundle
 ```
 

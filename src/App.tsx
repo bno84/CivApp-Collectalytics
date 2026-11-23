@@ -12,6 +12,7 @@ import { AdditionsChart } from './components/AdditionsChart.js';
 import { CivitaiLink, OpenProvider, StatTile, profilePath } from './components/common.js';
 import { CreatorLookup, RecentPicks, TopCreators } from './components/Creators.js';
 import { SnippetEditor } from './components/SnippetEditor.js';
+import type { Memory, RecentCollection } from './memory.js';
 
 type Report =
   | { status: 'idle' }
@@ -19,7 +20,7 @@ type Report =
   | { status: 'error'; id: number; message: string }
   | { status: 'ready'; data: CollectionRead; analysis: Analysis };
 
-export function App({ api }: { api: ApiClient }) {
+export function App({ api, memory }: { api: ApiClient; memory: Memory }) {
   const { ready, viewer, theme } = useBlockContext();
   const { requestSignIn } = useRequestSignIn();
   const root = useRef<HTMLDivElement>(null);
@@ -43,7 +44,7 @@ export function App({ api }: { api: ApiClient }) {
       </Card>
     );
   } else {
-    body = <Collectalytics api={api} />;
+    body = <Collectalytics api={api} memory={memory} />;
   }
 
   return (
@@ -59,7 +60,7 @@ export function App({ api }: { api: ApiClient }) {
   );
 }
 
-function Collectalytics({ api }: { api: ApiClient }) {
+function Collectalytics({ api, memory }: { api: ApiClient; memory: Memory }) {
   const [mine, setMine] = useState<CollectionSummary[] | null>(null);
   const [mineComplete, setMineComplete] = useState(true);
   const [mineError, setMineError] = useState<string | null>(null);
@@ -67,13 +68,21 @@ function Collectalytics({ api }: { api: ApiClient }) {
   const [linkText, setLinkText] = useState('');
   const [report, setReport] = useState<Report>({ status: 'idle' });
   const [creatorKey, setCreatorKey] = useState<string | null>(null);
+  const [recent, setRecent] = useState<RecentCollection[]>([]);
   const reading = useRef<AbortController | null>(null);
   const listing = useRef<AbortController | null>(null);
   // Set once the viewer (or the first load) has opened something, so a list
   // that finishes late never replaces their choice.
   const chosen = useRef(false);
 
-  const open = useCallback(async (id: number) => {
+  useEffect(() => {
+    let live = true;
+    memory.recent().then(entries => { if (live) setRecent(entries); });
+    return () => { live = false; };
+  }, [memory]);
+
+  /** `byLink`: the viewer named this collection, so it joins the recent list once it reads. */
+  const open = useCallback(async (id: number, byLink = false) => {
     chosen.current = true;
     reading.current?.abort();
     const controller = new AbortController();
@@ -88,13 +97,23 @@ function Collectalytics({ api }: { api: ApiClient }) {
       if (controller.signal.aborted) return;
       const analysis = analyse(data.items);
       setReport({ status: 'ready', data, analysis });
+      if (byLink) {
+        const { name, curator } = data.collection;
+        memory.remember({ id, name, curator: curator.username });
+        memory.recent().then(setRecent);
+      }
       // Opens on whoever was added last: the question is usually about the newest pick.
       setCreatorKey(analysis.items[0]?.creatorKey ?? null);
     } catch (error) {
       if (controller.signal.aborted) return;
       setReport({ status: 'error', id, message: error instanceof Error ? error.message : String(error) });
     }
-  }, [api]);
+  }, [api, memory]);
+
+  const forget = (id: number) => {
+    setRecent(entries => entries.filter(entry => entry.id !== id));
+    memory.forget(id);
+  };
 
   const loadMine = useCallback(async () => {
     listing.current?.abort();
@@ -124,6 +143,8 @@ function Collectalytics({ api }: { api: ApiClient }) {
 
   const linkId = parseCollectionRef(linkText);
   const ownedIds = useMemo(() => new Set((mine ?? []).map(item => item.id)), [mine]);
+  // Your own are in the list above already.
+  const recentOthers = recent.filter(entry => !ownedIds.has(entry.id));
   const options = (mine ?? []).map(item => ({
     value: String(item.id),
     label: `${item.name}${item.isPublic ? '' : ' (private)'} · ${item.itemCount.toLocaleString()}`,
@@ -142,11 +163,15 @@ function Collectalytics({ api }: { api: ApiClient }) {
             disabled={!options.length}
             onChange={value => open(Number(value))}
           />
-          <form className="ca-link-form" onSubmit={event => { event.preventDefault(); if (linkId) { open(linkId); setLinkText(''); } }}>
+          <form className="ca-link-form" onSubmit={event => { event.preventDefault(); if (linkId) { open(linkId, true); setLinkText(''); } }}>
             <TextInput label="Or any public collection" placeholder="Paste a collection link or ID" value={linkText}
               onChange={event => setLinkText(event.currentTarget.value)} />
             <Button type="submit" variant="light" disabled={!linkId || busy}>Open</Button>
           </form>
+          {recentOthers.length > 0 && (
+            <RecentLinks entries={recentOthers} selected={selected} disabled={busy}
+              onOpen={id => open(id, true)} onForget={forget} />
+          )}
         </div>
         {mineError && <Alert color="error" title="Could not list your collections">{mineError}</Alert>}
         {!mineComplete && (
@@ -172,7 +197,7 @@ function Collectalytics({ api }: { api: ApiClient }) {
         </Alert>
       )}
       {report.status === 'ready' && (
-        <ReportView data={report.data} analysis={report.analysis} owned={ownedIds.has(report.data.collection.id)}
+        <ReportView memory={memory} data={report.data} analysis={report.analysis} owned={ownedIds.has(report.data.collection.id)}
           creatorKey={creatorKey} onCreator={setCreatorKey}
           onRefresh={() => { open(report.data.collection.id); loadMine(); }} />
       )}
@@ -180,8 +205,32 @@ function Collectalytics({ api }: { api: ApiClient }) {
   );
 }
 
-function ReportView({ data, analysis, owned, creatorKey, onCreator, onRefresh }: {
-  data: CollectionRead; analysis: Analysis; owned: boolean; creatorKey: string | null;
+function RecentLinks({ entries, selected, disabled, onOpen, onForget }: {
+  entries: RecentCollection[]; selected: number | null; disabled: boolean;
+  onOpen: (id: number) => void; onForget: (id: number) => void;
+}) {
+  return (
+    <div className="ca-recent">
+      <span className="ca-label">Opened before</span>
+      <ul className="ca-recent-list">
+        {entries.map(entry => (
+          <li key={entry.id} className={entry.id === selected ? 'ca-recent-item is-selected' : 'ca-recent-item'}>
+            <button type="button" className="ca-recent-open" disabled={disabled} onClick={() => onOpen(entry.id)}
+              title={entry.curator ? `${entry.name}, by ${entry.curator}` : entry.name}>
+              <span className="ca-recent-name">{entry.name}</span>
+              {entry.curator && <span className="ca-dimmed"> · {entry.curator}</span>}
+            </button>
+            <button type="button" className="ca-recent-forget" aria-label={`Forget ${entry.name}`}
+              title="Forget" onClick={() => onForget(entry.id)}>×</button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ReportView({ memory, data, analysis, owned, creatorKey, onCreator, onRefresh }: {
+  memory: Memory; data: CollectionRead; analysis: Analysis; owned: boolean; creatorKey: string | null;
   onCreator: (key: string | null) => void; onRefresh: () => void;
 }) {
   const { collection, items } = data;
@@ -241,9 +290,13 @@ function ReportView({ data, analysis, owned, creatorKey, onCreator, onRefresh }:
           </div>
         </>
       ) : (
-        <Alert color="info">Nothing in this collection is visible to you here yet.</Alert>
+        <Alert color="info" title="No images or videos to count">
+          Collectalytics counts image and video collections. Collections of models, posts or articles
+          are not supported yet, because Civitai does not share those items with apps. Images above your
+          browsing level are left out too.
+        </Alert>
       )}
-      <SnippetEditor collectionId={collection.id} name={collection.name} url={`https://civitai.com/collections/${collection.id}`} values={values} />
+      <SnippetEditor memory={memory} collectionId={collection.id} name={collection.name} url={`https://civitai.com/collections/${collection.id}`} values={values} />
     </Stack>
   );
 }

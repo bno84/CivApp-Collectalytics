@@ -2,9 +2,12 @@
 // and an in-memory stand-in for Civitai's collection routes, shaped like them.
 import { getTransport } from '@civitai/blocks-react';
 import { Harness } from '@civitai/blocks-react/testing';
+import { createFakeStorage } from '@civitai/sdk/testing';
 
+import manifest from '../../block.manifest.json';
 import { App } from '../App.js';
 import { ApiError, type ApiClient, type CollectionDetail, type MediaItem } from '../api.js';
+import { createMemory } from '../memory.js';
 
 // The mock host answers from this origin; the transport drops anything else.
 getTransport({ allowedParentOrigins: [window.location.origin] });
@@ -78,10 +81,14 @@ const fakeApi: ApiClient = {
   },
 };
 
+// The document store, in memory and gone on reload, enforcing the server's rules
+// against the real manifest.
+const memory = createMemory(createFakeStorage({ manifest, viewer: { username: 'dev-viewer' } }).storage);
+
 export function HarnessApp() {
   return (
     <Harness>
-      <App api={fakeApi} />
+      <App api={fakeApi} memory={memory} />
     </Harness>
   );
 }

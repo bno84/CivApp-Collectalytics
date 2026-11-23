@@ -15,6 +15,7 @@
   "dependencies": {
     "@civitai/app-sdk": "^0.92.0",
     "@civitai/blocks-react": "^0.85.1",
+    "@civitai/sdk": "0.29.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

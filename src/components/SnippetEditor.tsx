@@ -3,11 +3,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Card, Group, Select, TextInput, Textarea } from '@civitai/blocks-react/ui';
 
 import { DEFAULT_LINES, collectionTitle, snippet, type Heading, type SnippetSettings } from '../analysis.js';
+import type { Memory } from '../memory.js';
 import { SectionTitle, useOpen } from './common.js';
 
-// Edits by collection id, for the rest of the visit: they survive a refresh or
-// switching collections, not a reload.
-const edits = new Map<number, SnippetSettings>();
+/** How long typing pauses before an edit is saved. */
+const SAVE_DELAY_MS = 800;
 
 const HEADINGS = [
   { value: 'h2', label: 'Heading' },
@@ -16,25 +16,49 @@ const HEADINGS = [
 ];
 
 /**
- * A stats blurb to paste into an article, model or post description. Edits last
- * for the visit: the sandboxed frame has no storage of its own, and keeping them
- * on Civitai would need the storage scope this app does not ask for.
+ * A stats blurb to paste into an article, model or post description. Edits are
+ * kept per collection in the viewer's private app storage on Civitai, so they
+ * come back next visit (see memory.ts).
  */
-export function SnippetEditor({ collectionId, name, url, values }:
-  { collectionId: number; name: string; url: string; values: Record<string, string> }) {
+export function SnippetEditor({ memory, collectionId, name, url, values }:
+  { memory: Memory; collectionId: number; name: string; url: string; values: Record<string, string> }) {
   const open = useOpen();
   const defaults = useMemo<SnippetSettings>(() => ({ title: collectionTitle(name), lines: DEFAULT_LINES, heading: 'h2' }), [name]);
-  const [settings, setSettings] = useState(() => edits.get(collectionId) ?? defaults);
+  const [settings, setSettings] = useState(defaults);
+  const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<{ text: string; error?: boolean } | null>(null);
   const preview = useRef<HTMLDivElement>(null);
-  useEffect(() => setSettings(edits.get(collectionId) ?? defaults), [collectionId, defaults]);
+  const pending = useRef<(() => void) & { cancel(): void } | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    setSettings(defaults);
+    setLoading(true);
+    memory.snippet(collectionId).then(saved => {
+      if (!live) return;
+      setSettings(saved ?? defaults);
+      setLoading(false);
+    });
+    return () => {
+      live = false;
+      // Switching collections, or leaving, saves what was typed last.
+      pending.current?.();
+    };
+  }, [memory, collectionId, defaults]);
 
   const { html, text } = snippet(settings, values, url);
   const save = (next: SnippetSettings) => {
     setSettings(next);
     setStatus(null);
-    if (next.title === defaults.title && next.lines === defaults.lines && next.heading === defaults.heading) edits.delete(collectionId);
-    else edits.set(collectionId, next);
+    const isDefault = next.title === defaults.title && next.lines === defaults.lines && next.heading === defaults.heading;
+    pending.current?.cancel();
+    const write = Object.assign(() => {
+      clearTimeout(timer);
+      if (pending.current === write) pending.current = null;
+      memory.saveSnippet(collectionId, isDefault ? null : next);
+    }, { cancel: () => clearTimeout(timer) });
+    const timer = setTimeout(write, SAVE_DELAY_MS);
+    pending.current = write;
   };
   const update = (patch: Partial<SnippetSettings>) => save({ ...settings, ...patch });
 
@@ -67,10 +91,10 @@ export function SnippetEditor({ collectionId, name, url, values }:
       </SectionTitle>
       <div className="ca-snippet">
         <div className="ca-snippet-fields">
-          <TextInput label="Title" value={settings.title} onChange={event => update({ title: event.currentTarget.value })} />
-          <Textarea label="Lines" minRows={3} value={settings.lines} onChange={event => update({ lines: event.currentTarget.value })} />
-          <Select label="Title style" value={settings.heading} options={HEADINGS} onChange={value => update({ heading: value as Heading })} />
-          <Button variant="subtle" size="sm" onClick={() => save(defaults)}>Reset</Button>
+          <TextInput label="Title" value={settings.title} disabled={loading} onChange={event => update({ title: event.currentTarget.value })} />
+          <Textarea label="Lines" minRows={3} value={settings.lines} disabled={loading} onChange={event => update({ lines: event.currentTarget.value })} />
+          <Select label="Title style" value={settings.heading} options={HEADINGS} disabled={loading} onChange={value => update({ heading: value as Heading })} />
+          <Button variant="subtle" size="sm" disabled={loading} onClick={() => save(defaults)}>Reset</Button>
         </div>
         <div className="ca-snippet-out">
           <span className="ca-label">Preview</span>

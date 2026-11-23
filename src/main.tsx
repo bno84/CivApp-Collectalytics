@@ -3,9 +3,11 @@ import { createRoot } from 'react-dom/client';
 
 import { useBlockToken, useHostOrigin } from '@civitai/blocks-react';
 import { injectBlocksStyles } from '@civitai/blocks-react/ui';
+import { initialize } from '@civitai/sdk';
 
 import { App } from './App.js';
 import { createHttpClient } from './api.js';
+import { createMemory } from './memory.js';
 import './index.css';
 
 // The design-system pack's stylesheet: Civitai's tokens and component styles,
@@ -24,7 +26,15 @@ function LiveApp() {
     getToken: () => tokenRef.current.raw || undefined,
     refreshToken: () => tokenRef.current.refresh(),
   }), [origin]);
-  return <App api={api} />;
+  // The document store, on the same block token. Started from the token rather
+  // than with a bare initialize(): that would open a second host bridge beside
+  // blocks-react's, and a second BLOCK_READY.
+  const memory = useMemo(() => createMemory(initialize({
+    siteUrl: `${origin ?? window.location.origin}/api/v1`,
+    token: () => tokenRef.current.raw,
+    refresh: async () => (await tokenRef.current.refresh()).raw,
+  }).then(app => app.storage)), [origin]);
+  return <App api={api} memory={memory} />;
 }
 
 async function mount(): Promise<ReactNode> {

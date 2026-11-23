@@ -190,7 +190,10 @@ importers:
         version: 0.92.0(vite@6.4.6)
       '@civitai/blocks-react':
         specifier: ^0.85.1
-        version: 0.85.1(@civitai/app-sdk@0.92.0(vite@6.4.6))(react@19.3.1)
+        version: 0.85.1(@civitai/app-sdk@0.92.0(vite@6.4.6))(@civitai/sdk@0.29.1)(react@19.3.1)
+      '@civitai/sdk':
+        specifier: 0.29.1
+        version: 0.29.1
       react:
         specifier: ^19.0.0
         version: 19.3.1
@@ -347,6 +350,14 @@ packages:
     peerDependenciesMeta:
       '@civitai/sdk':
         optional: true
+
+  '@civitai/orchestration-client@0.2.8':
+    resolution: {integrity: sha512-VRF+6UIQIXNBDsEBQle3xnAHKVCgT51QB1Bn+lu4aMKPRQOCHj3oJMxleuVO5DsS4gS73/3mnx3knc33JHws/A==}
+    engines: {git: '>=2.11.0', node: '>=18.0.0', npm: '>=7.19.0', yarn: '>=1.7.0'}
+
+  '@civitai/sdk@0.29.1':
+    resolution: {integrity: sha512-eCldSJYfLA2I8lMuavUK3XU8wYr3ao89u7UTHpf0kQCtYrfuXCEyNG8yjx9sont3m8RJ6GEp97C1ofDSzuc+hg==}
+    engines: {node: '>=20'}
 
   '@civitai/theme@0.5.2':
     resolution: {integrity: sha512-mqePcnPyC1iVX39PoXn1mMnWrLYKuHb03R4jUNNaVQeKe0c+iz5ifKOdAHUwYun3uKFCiSkho3bHg45I3xEVWw==}
@@ -507,6 +518,10 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@hey-api/client-fetch@0.1.14':
+    resolution: {integrity: sha512-6RoO2prOVrQfx2wClJ7DkeIVWQokiRLIdqiuxvFTfWEQVfOc+hQhAw6/IijYrSM9cA7A7DzmHpzTLc/gbQ7/2Q==}
+    deprecated: Starting with v0.73.0, this package is bundled directly inside @hey-api/openapi-ts.
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -893,6 +908,9 @@ packages:
     resolution: {integrity: sha512-QNhWdt7nrgVWWQG58QuGsAR3jv3Hbe4mb4vz7w2csnHavciZJgda1CPNaldF6eVxv90ud3jUXpKlHL69gO38yw==}
     engines: {node: '>=0.10.0'}
 
+  rfc6902@5.5.0:
+    resolution: {integrity: sha512-YB4sZ1yAb66eler5izrC0Y8RKE43HWViKhlYJDNRAj6JDep+Tq88llap1uJr1FUR09+Nj46pne8z/LYcTr/2eA==}
+
   rollup@4.68.8:
     resolution: {integrity: sha512-IHx4DeeTGhoAPke6p1Wlg0JEQFyQoZQQjEe1iD+nhEERk7eoeHK9zyOpVJiGc54Z1MCgI96rN1tD7Ttub8XyPA==}
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
@@ -932,6 +950,9 @@ packages:
   tinyrainbow@3.2.0:
     resolution: {integrity: sha512-LgO3D9yZJjApUiuUfl9iFAwrtaX4+lok3wJIqttGoKCHlWUqHqbQpnxCf82L8FjgKsh4iGo78hqJwgL8F6To2A==}
     engines: {node: '>=14.0.0'}
+
+  tslib@2.9.1:
+    resolution: {integrity: sha512-a4Ux9VKuIMHsOS7ENbEq6hK2ZGYIT27Rtl0E4eD9KqwxhKiQeMZE/9xb3IdYwWaSOyIBQLExhQgXDTYoiCxnWA==}
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -1151,10 +1172,10 @@ snapshots:
     optionalDependencies:
       vite: 6.4.6
 
-  '@civitai/blocks-react@0.85.1(@civitai/app-sdk@0.92.0(vite@6.4.6))(react@19.3.1)':
+  '@civitai/blocks-react@0.85.1(@civitai/app-sdk@0.92.0(vite@6.4.6))(@civitai/sdk@0.29.1)(react@19.3.1)':
     dependencies:
       '@civitai/app-sdk': 0.92.0(vite@6.4.6)
-      '@civitai/components': 0.13.1
+      '@civitai/components': 0.13.1(@civitai/sdk@0.29.1)
       '@civitai/theme': 0.5.2
       react: 19.3.1
     transitivePeerDependencies:
@@ -1167,10 +1188,22 @@ snapshots:
     optionalDependencies:
       '@civitai/cli-linux-x64': 0.1.150
 
-  '@civitai/components@0.13.1':
+  '@civitai/components@0.13.1(@civitai/sdk@0.29.1)':
     dependencies:
       '@civitai/theme': 0.5.2
       lit: 3.3.3
+    optionalDependencies:
+      '@civitai/sdk': 0.29.1
+
+  '@civitai/orchestration-client@0.2.8':
+    dependencies:
+      '@hey-api/client-fetch': 0.1.14
+      rfc6902: 5.5.0
+      tslib: 2.9.1
+
+  '@civitai/sdk@0.29.1':
+    dependencies:
+      '@civitai/orchestration-client': 0.2.8
 
   '@civitai/theme@0.5.2': {}
 
@@ -1251,6 +1284,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.25.12':
     optional: true
+
+  '@hey-api/client-fetch@0.1.14': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -1585,6 +1620,8 @@ snapshots:
 
   react@19.3.1: {}
 
+  rfc6902@5.5.0: {}
+
   rollup@4.68.8:
     dependencies:
       '@types/estree': 1.0.10
@@ -1639,6 +1676,8 @@ snapshots:
       picomatch: 4.0.7
 
   tinyrainbow@3.2.0: {}
+
+  tslib@2.9.1: {}
 
   typescript@5.9.3: {}
 

@@ -192,6 +192,73 @@ button:focus-visible,
   min-width: 0;
 }
 
+/* -- recently opened by link ---------------------------------------------------- */
+
+.ca-recent {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.ca-recent-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ca-recent-item {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  border-radius: 999px;
+  background: var(--ca-surface-2);
+  font-size: 0.8125rem;
+}
+
+.ca-recent-item.is-selected {
+  background: var(--ca-primary-soft);
+}
+
+.ca-recent-item button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ca-recent-open {
+  min-width: 0;
+  padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.ca-recent-open:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.ca-recent-forget {
+  padding: 0.25rem 0.625rem 0.25rem 0.375rem;
+  color: var(--ca-dimmed);
+}
+
+.ca-recent-open:hover .ca-recent-name,
+.ca-recent-forget:hover {
+  color: var(--ca-primary);
+}
+
+.ca-recent-item button:focus-visible {
+  outline: 2px solid var(--ca-primary);
+  outline-offset: -2px;
+  border-radius: 999px;
+}
+
 /* -- report header ------------------------------------------------------------- */
 
 .ca-collection-name {
