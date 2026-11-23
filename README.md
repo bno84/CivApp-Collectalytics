@@ -1,135 +1,102 @@
 # Collectalytics
 
-A Civitai App (Vite + React, config-as-code build).
+A Civitai App (Vite + React + TypeScript) with statistics for a Civitai
+collection: who you collect, how often you come back to them, and a stats
+snippet to paste into Civitai. It is a port of the Collectalytics tab of
+[Civitai Artist Discovery](https://github.com/theevildarkmage-hue/Civitai-Artist-Discovery).
 
-## What this is
+## What it shows
 
-A sandboxed static web app served in an iframe by the Civitai host. The
-platform owns the build: it installs from the committed lockfile and then runs
-the `buildCommand` from `block.manifest.json` (`pnpm run build`), serving the
-static output from `outputDir` (`dist/`). You do NOT commit `dist/` — the
-platform builds it.
+- **Overview:** items collected, unique creators, the top five creators' share,
+  and who was added most recently.
+- **New creators over the collection's life:** a bar chart of how many creators
+  first appear in each block of additions, oldest first. Click a bar to see the
+  items in that block.
+- **Recently added:** the 15 newest items, with how many additions ago that
+  creator's previous pick was.
+- **Top creators:** ranked by item count.
+- **Creator check:** a creator's rank, share, newest pick, recent activity, the
+  typical gap between their picks, and a timeline of where their items sit.
+- **Stats snippet:** a heading and lines with placeholders, rendered as HTML
+  that Civitai's editors accept, with buttons to copy it as rich text or HTML.
 
-**This project uses pnpm. Do not use npm.** Commit `pnpm-lock.yaml`: the
-platform installs *strictly* from it, with no registry re-resolve fallback, so
-builds are byte-reproducible. `buildCommand` must stay `pnpm run build` to match
-that lockfile. A lockfile that disagrees with `buildCommand` is the most common
-build failure there is — `pnpm exec civitai app validate` catches it before you
-submit.
+Links open on Civitai in a new tab through the host.
 
-The Civitai CLI is a project devDependency, not a global install. Run it as
-`pnpm exec civitai <command>`.
+## Permissions
 
-## The host handshake (`src/civitai-host.js`) — don't delete it
+`collections:read:self` only. It is consent-exempt, so viewers get no consent
+prompt. It reaches:
 
-This app declares a `page` surface, so the Civitai host mounts it full-viewport
-and **waits for it to say hello before revealing it**. That hello is a single
-`BLOCK_READY` message, and it is the only thing that flips the host into its
-ready state. An app that never sends it is replaced by a failure card once the
-host's bounded retries run out — even though the app itself works perfectly.
+- `GET /api/v1/blocks/collections?mode=mine`: the viewer's own collections.
+- `GET /api/v1/blocks/collections/{id}`: any public collection, page by page.
 
-`src/civitai-host.js` does exactly that and nothing else. `src/main.jsx`
-imports it first, for its side effect; leave both in place.
+## Differences from Discovery
 
-Two details worth knowing, because they apply to every message you add later:
+Discovery ran on the viewer's own Civitai session. An app gets only the block
+API, which changes what can be counted:
 
-- **Every block → host message is an envelope:** `{ type, payload }`. The host
-  reads `event.data.payload`, so fields put at the top level
-  (`{ type: 'X', height: 0 }`) arrive as `payload: undefined`.
-- **Answer, don't announce.** The ack is sent in *response* to the host's
-  `BLOCK_INIT`, addressed at the origin that init arrived from rather than
-  broadcast to `'*'`.
+| Discovery | Here | Why |
+|---|---|---|
+| Dates: items per day/week, "added 3 days ago" | Positions: "added 12 additions ago", new creators per block of additions | Items arrive newest-added first, but without the date each was added |
+| Owned **and followed** collections in the picker | Owned collections; any public one opens by link or ID | `mode=mine` lists owned collections only |
+| Private collections | Not read | Needs the consent-gated `collections:read:private`; left out to keep permissions minimal |
+| Models, posts and articles counted | Images and videos only | The block API returns playable media only |
+| Follower count, total video length | Not shown | Not in the block API |
+| Review queue, accept with a thanks comment | Not ported | No app scope can accept collection items or post comments |
+| Image detail dialog | Opens the image on Civitai | Generation data is not in the block API |
+| Snippet edits and last-opened collection remembered | Kept for the visit only | The sandboxed frame has no storage; keeping them on Civitai would need the `apps:storage` scope |
 
-> 🔒 **Before you handle any message that carries data, add an origin
-> allowlist.** `src/civitai-host.js` answers `window.parent` — whoever framed
-> you. That is fine for the ack, which carries no data and discloses nothing a
-> framing page doesn't already know. It is *not* fine for a token, a viewer,
-> storage, or a generation result: check `event.origin` against origins you
-> trust first, or any page that frames your app can feed it anything. The
-> emitter deliberately ships no allowlist — the real list (production, preview
-> subdomains, dev tunnels) is platform state that moves without notice, and
-> `@civitai/blocks-react` already maintains it from
-> `VITE_BLOCK_ALLOWED_PARENT_ORIGINS`. Adopt the SDK before you handle data.
+Contest-mode collections are served in a shuffled order, so their recency
+figures are not meaningful.
 
-If you outgrow raw `postMessage`, `@civitai/blocks-react` covers all of this
-(and the rest of the protocol): its transport performs this same handshake
-internally.
+## How it is built
 
-> ⚠️ **When you adopt the SDK, delete `src/civitai-host.js` in the SAME
-> change.** That is the one time removing it is correct, and running both is
-> worse than running neither. Whichever handshake answers the host's *first*
-> `BLOCK_INIT` cancels the host's retry loop **and** its readiness timeout, so
-> if this file wins the race the SDK's transport can be left never having seen
-> an init: it gives up after 10s while the host sits "ready", showing an app
-> that never started, with no retry and no error card.
+- `src/api.ts`: the only network code. Calls the block routes on the host origin
+  with the host-minted block token, retries once on 401 and waits out 429s.
+  Reads up to 10,000 items (100 pages of 100).
+- `src/analysis.ts`: all counting, free of React, tested in
+  `src/analysis.test.ts`.
+- `src/App.tsx` and `src/components/`: UI built from `@civitai/blocks-react`
+  (host handshake, theme, sizing, sign-in, navigation) and its design-system
+  pack `@civitai/blocks-react/ui`. Styling in `src/index.css` uses the pack's
+  `--civitai-*` tokens, so light and dark follow the host.
+- `src/dev/harness.tsx`: the SDK mock host plus sample collections, for
+  `pnpm run dev:harness`. Imported only in development builds.
 
 ## Width-adaptive layout (`src/index.css`)
 
-Your app renders inside whatever slot the host gave it, and **slot width is not
-monotonic in viewport width** — the `model.sidebar_top` slot is about 360px next
-to a 360px phone and only about 430px next to a 1440px desktop. A viewport-based
-media query inside the frame therefore answers a question nobody asked, which is
-why this template ships none.
+The app renders inside whatever slot the host gives it, and slot width does not
+follow viewport width. So `.app` is a query container and the layout adapts with
+`@container` rules against the container's own width, narrow first: one column
+by default, four stat tiles from 480px, two columns from 768px. The chart is
+drawn to its frame's measured width so its labels stay readable.
 
-`src/index.css` makes `.app` a **query container** (`container-type:
-inline-size`) and adapts `.app-actions` against the container's own width:
+The thresholds are Civitai's block breakpoints in CSS pixels
+(`xs 480 · sm 768 · md 1024 · lg 1184 · xl 1440`). Write the number out: a
+`--civitai-bp-*` custom property in a query's condition never matches.
 
-```css
-.app-actions { flex-direction: column; }          /* narrow — the base state */
-
-@container block (min-width: 480px) {
-  .app-actions { flex-direction: row; }           /* wider */
-}
-```
-
-Narrow is the base state and widening is the override, on purpose: a block is
-narrow far more often than not, and that is also what a browser without
-`@container` support falls back to.
-
-The thresholds are Civitai's block breakpoint scale, in **CSS pixels**:
-`xs 480 · sm 768 · md 1024 · lg 1184 · xl 1440`. (Not Mantine's stock `em`
-scale — the two agree on `sm` and nowhere else.) 480 is the step this layout can
-actually cross, since `.app` is capped at `40rem`.
-
-> 🔴 **Write the pixel number out.** The design system publishes these as
-> `--civitai-bp-*` custom properties, and reaching for one in the condition of a
-> media or container query is the first thing most people try. It does not work:
-> a query's condition is evaluated before custom properties are substituted, so
-> the rule never matches — no error, no warning, green build, and a layout
-> silently stuck on one branch.
-
-Adopting `@civitai/blocks-react` later? Its `useBlockBreakpoint()` hook reports
-the same scale in JS, for decisions CSS cannot make — rendering a genuinely
-*different* element tree rather than restyling the same one. The `page-money`
-template (`civitai app init "…" --template page-money`) shows that form.
-
-Full guide: <https://developer.civitai.com/apps/guide/responsive>
+Guide: <https://developer.civitai.com/apps/guide/responsive>
 
 ## Develop
 
+This project uses pnpm. Do not use npm. Commit `pnpm-lock.yaml`: the platform
+installs strictly from it, and `buildCommand` stays `pnpm run build` to match.
+
 ```bash
 pnpm install
-pnpm run dev      # http://localhost:5173
+pnpm run dev:harness   # http://localhost:5186, mock host + sample collections
+pnpm test              # unit tests for the counting
+pnpm run build         # type check + production bundle
 ```
 
-**There is no host behind `pnpm run dev`**, so nothing sends `BLOCK_INIT` and
-`src/civitai-host.js` stays silent — expected, not a bug. You are looking at
-your own UI; the handshake is exercised for real once the app runs on Civitai.
-(If you want to drive the protocol locally, the `page-money` template ships a
-mock host: `civitai app init "…" --template page-money`, then
-`pnpm run dev:harness`.)
+Plain `pnpm run dev` has no host behind it, so the app waits for a `BLOCK_INIT`
+that never comes. Use the harness.
 
-To see your local app inside the real Civitai host (dev tunnels are
-invite-only), serve it with `pnpm run dev:tunnel` in one terminal and run
-`civitai app dev-tunnel` in another. `dev:tunnel` serves on port 5186 and sends
-the headers that let any Civitai domain frame the app; plain `pnpm run dev` does not
-send them.
+To run your local app inside the real Civitai host (dev tunnels are
+invite-only), run `pnpm run dev:tunnel` in one terminal and
+`pnpm exec civitai app dev-tunnel` in another.
 
-Build locally to sanity-check what the platform will produce:
-
-```bash
-pnpm run build && pnpm run preview
-```
+The Civitai CLI is a project devDependency. Run it as `pnpm exec civitai …`.
 
 ## Validate
 

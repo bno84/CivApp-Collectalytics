@@ -46,9 +46,9 @@
       /* Mirrors `.app` in src/index.css so the skeleton occupies the same box
          the real first render does. */
       [data-boot-skeleton] {
-        max-width: 40rem;
+        max-width: 64rem;
         margin: 0 auto;
-        padding: 2rem 1.5rem;
+        padding: 1.5rem 1rem;
       }
       /* Attribute selectors, not classes: a class is fair game for CSS-modules
          hashing or a purge pass, an attribute survives the bundler. */
@@ -81,10 +81,9 @@
         the `civitai-block=v1` marker or it is not the host's (a hash-routed
         app's own state must never theme the boot), and only `theme=light` /
         `theme=dark` are honoured — anything else, an absent fragment
-        included, keeps the dark default. When this app learns to consume the
-        theme (useBlockContext().theme), sync documentElement's data-theme
-        from it too, so BLOCK_INIT can correct a stale fragment and
-        THEME_CHANGE repaints the page behind the app.
+        included, keeps the dark default. BLOCK_INIT remains authoritative:
+        src/App.tsx overwrites this attribute when it lands and keeps it in
+        step on THEME_CHANGE.
       */
       (function () {
         try {
@@ -105,7 +104,7 @@
            screen after mount.
 
            NO REMOVAL CODE IS NEEDED HERE, AND THAT IS REACT-SPECIFIC.
-           `createRoot(container).render(...)` in src/main.jsx clears the
+           `createRoot(container).render(...)` in src/main.tsx clears the
            container's existing children before its first commit, so this
            skeleton removes itself. A framework that APPENDS instead of clearing
            (Svelte 5's `mount(App, { target })`, for one) leaves it on screen
@@ -123,6 +122,6 @@
         <div data-boot-shape="button"></div>
       </div>
     </div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

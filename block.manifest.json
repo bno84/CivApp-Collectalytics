@@ -3,13 +3,17 @@
   "blockId": "collectalytics",
   "version": "0.1.0",
   "name": "Collectalytics",
-  "tagline": "Collectalytics - a Civitai app",
+  "tagline": "Statistics for your Civitai collections.",
+  "description": "Pick one of your collections, or paste the link to any public one, and Collectalytics reads it and counts.\n\nSee how many unique creators you have collected and how much of the collection the top ones hold. See your most recent picks, with how long since each creator was last added, and how many new names each stretch of additions brought in. Look up a creator to see everything you have added from them and where it sits in the collection.\n\nA stats snippet, with the collection linked by name, copies straight into an article, model or post description.\n\nThe app only reads. It never changes your collections.",
   "type": "block",
-  "scopes": [],
+  "category": "analytics",
+  "scopes": [
+    "collections:read:self"
+  ],
   "page": {
     "path": "/",
     "title": "Collectalytics",
-    "icon": "bolt"
+    "icon": "chart-bar"
   },
   "iframe": {
     "minHeight": 600,
@@ -17,7 +21,7 @@
     "resizable": true,
     "sandbox": "allow-scripts allow-forms"
   },
-  "contentRating": "g",
+  "contentRating": "pg13",
   "bootSkeleton": true,
   "minApiVersion": "1.0",
   "buildCommand": "pnpm run build",
