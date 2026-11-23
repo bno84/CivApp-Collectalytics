@@ -632,6 +632,8 @@ button:focus-visible,
 }
 
 .ca-source-url {
+  -webkit-user-select: all;
+  /* eslint-disable-next-line css/use-baseline -- progressive: a plain selection still works */
   user-select: all;
   overflow-wrap: anywhere;
 }

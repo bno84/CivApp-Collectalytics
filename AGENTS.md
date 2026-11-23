@@ -15,6 +15,11 @@
   (React-free, tested); persistence in `src/memory.ts` runs on the
   `blocks-react` token, not `initialize()`, and falls back to in-memory on any
   refusal (the store refuses until the app is approved).
+- Run `pnpm run lint` (ESLint: typescript-eslint type-checked, React, hooks,
+  CSS) before committing. Every source file starts with
+  `// SPDX-License-Identifier: AGPL-3.0-or-later` (`/* … */` in CSS); the
+  `local/spdx-header` rule enforces it and `--fix` inserts it. Disable a rule
+  only on the line, with `-- reason`.
 - Storage collection names allow only `[a-z0-9_]`; renaming one, or changing
   its visibility, starts it empty.
 - Layout uses `@container` queries on `.app`, not viewport media queries. Write

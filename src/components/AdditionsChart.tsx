@@ -19,6 +19,7 @@ export function AdditionsChart() {
       <div className="ca-pending">
         <svg className="ca-pending-chart" viewBox={`0 0 ${MOCK.length * 10} 100`} preserveAspectRatio="none" aria-hidden="true">
           {MOCK.map((value, i) => (
+            // eslint-disable-next-line @eslint-react/no-array-index-key -- MOCK is a fixed, never-reordered list
             <rect key={i} x={i * 10 + 2} y={100 - (value / max) * 92} width={6} height={(value / max) * 92} rx={1.5} />
           ))}
         </svg>

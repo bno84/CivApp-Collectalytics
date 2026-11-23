@@ -28,14 +28,13 @@ export function SnippetEditor({ memory, collectionId, name, url, values }:
   const [settings, setSettings] = useState(defaults);
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<{ text: string; error?: boolean } | null>(null);
-  const preview = useRef<HTMLDivElement>(null);
-  const pending = useRef<(() => void) & { cancel(): void } | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const pendingRef = useRef<(() => void) & { cancel(): void } | null>(null);
 
   useEffect(() => {
+    // App keys this editor by collection, so a new collection starts from fresh state.
     let live = true;
-    setSettings(defaults);
-    setLoading(true);
-    memory.snippet(collectionId).then(saved => {
+    void memory.snippet(collectionId).then(saved => {
       if (!live) return;
       setSettings(saved ?? defaults);
       setLoading(false);
@@ -43,7 +42,7 @@ export function SnippetEditor({ memory, collectionId, name, url, values }:
     return () => {
       live = false;
       // Switching collections, or leaving, saves what was typed last.
-      pending.current?.();
+      pendingRef.current?.();
     };
   }, [memory, collectionId, defaults]);
 
@@ -52,14 +51,14 @@ export function SnippetEditor({ memory, collectionId, name, url, values }:
     setSettings(next);
     setStatus(null);
     const isDefault = next.title === defaults.title && next.lines === defaults.lines && next.heading === defaults.heading;
-    pending.current?.cancel();
+    pendingRef.current?.cancel();
     const write = Object.assign(() => {
       clearTimeout(timer);
-      if (pending.current === write) pending.current = null;
-      memory.saveSnippet(collectionId, isDefault ? null : next);
+      if (pendingRef.current === write) pendingRef.current = null;
+      void memory.saveSnippet(collectionId, isDefault ? null : next);
     }, { cancel: () => clearTimeout(timer) });
     const timer = setTimeout(write, SAVE_DELAY_MS);
-    pending.current = write;
+    pendingRef.current = write;
   };
   const update = (patch: Partial<SnippetSettings>) => save({ ...settings, ...patch });
 
@@ -82,7 +81,7 @@ export function SnippetEditor({ memory, collectionId, name, url, values }:
     } catch {
       // The frame may not be allowed the async clipboard; copying a selection still works.
     }
-    done(selectionCopy(rich ? preview.current : null, html));
+    done(selectionCopy(rich ? previewRef.current : null, html));
   }
 
   return (
@@ -99,8 +98,8 @@ export function SnippetEditor({ memory, collectionId, name, url, values }:
         </div>
         <div className="ca-snippet-out">
           <span className="ca-label">Preview</span>
-          {/* Every typed character is escaped by snippet(); the tags are a fixed set. */}
-          <div className="ca-snippet-preview" ref={preview} dangerouslySetInnerHTML={{ __html: html }}
+          {/* eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml -- snippet() escapes every typed character; the tags are a fixed set */}
+          <div className="ca-snippet-preview" ref={previewRef} dangerouslySetInnerHTML={{ __html: html }}
             onClick={event => {
               // The copied HTML keeps its plain link; in the frame it opens through the host.
               const link = (event.target as Element).closest('a');
@@ -109,8 +108,8 @@ export function SnippetEditor({ memory, collectionId, name, url, values }:
               open(new URL(link.href).pathname);
             }} />
           <Group gap="0.5rem">
-            <Button onClick={() => copy(true)}>Copy for Civitai</Button>
-            <Button variant="light" onClick={() => copy(false)}>Copy HTML</Button>
+            <Button onClick={() => void copy(true)}>Copy for Civitai</Button>
+            <Button variant="light" onClick={() => void copy(false)}>Copy HTML</Button>
           </Group>
           {status && <p className={status.error ? 'ca-error' : 'ca-dimmed'} role="status">{status.text}</p>}
           <details>

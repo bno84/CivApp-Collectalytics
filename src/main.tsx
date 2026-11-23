@@ -19,7 +19,10 @@ injectBlocksStyles();
 function LiveApp() {
   const origin = useHostOrigin();
   const token = useBlockToken();
-  // Read at request time, so a refreshed token is used without rebuilding the client.
+  // Read at request time, so a refreshed token is used without rebuilding the
+  // client. The clients below read the ref only inside request callbacks, never
+  // during render, so this latest-value ref is safe.
+  /* eslint-disable react-hooks/refs */
   const tokenRef = useRef(token);
   tokenRef.current = token;
   const api = useMemo(() => createHttpClient({
@@ -35,6 +38,7 @@ function LiveApp() {
     token: () => tokenRef.current.raw,
     refresh: async () => (await tokenRef.current.refresh()).raw,
   }).then(app => app.storage)), [origin]);
+  /* eslint-enable react-hooks/refs */
   return <App api={api} memory={memory} />;
 }
 
@@ -49,4 +53,4 @@ async function mount(): Promise<ReactNode> {
 
 const container = document.getElementById('root');
 if (!container) throw new Error('#root missing from index.html');
-mount().then(node => createRoot(container).render(<StrictMode>{node}</StrictMode>));
+void mount().then(node => createRoot(container).render(<StrictMode>{node}</StrictMode>));

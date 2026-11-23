@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, use, useState, type ReactNode } from 'react';
 
 import { useCivitaiNavigate } from '@civitai/blocks-react';
 
@@ -13,10 +13,10 @@ const OpenContext = createContext<Open>(() => {});
 
 export function OpenProvider({ children }: { children: ReactNode }) {
   const { navigate } = useCivitaiNavigate();
-  return <OpenContext.Provider value={path => navigate(path, { scope: 'site', target: 'new_tab' })}>{children}</OpenContext.Provider>;
+  return <OpenContext value={path => navigate(path, { scope: 'site', target: 'new_tab' })}>{children}</OpenContext>;
 }
 
-export const useOpen = () => useContext(OpenContext);
+export const useOpen = () => use(OpenContext);
 
 export function CivitaiLink({ path, children, className = '' }: { path: string | null; children: ReactNode; className?: string }) {
   const open = useOpen();
@@ -68,7 +68,7 @@ export function SectionTitle({ children, note }: { children: ReactNode; note?: R
   return (
     <header className="ca-section-head">
       <h2>{children}</h2>
-      {note && <p className="ca-dimmed">{note}</p>}
+      {note ? <p className="ca-dimmed">{note}</p> : null}
     </header>
   );
 }
