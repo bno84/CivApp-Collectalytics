@@ -9,6 +9,17 @@
   `civitai …` command below as `pnpm exec civitai …`. Do not use the
   `npx -y @civitai/cli@latest` fallback and do not install it globally.
 - Build scripts are opt-in via `allowBuilds` in `pnpm-workspace.yaml`.
+- Run locally with `pnpm run dev:harness` (mock host). Plain `pnpm run dev`
+  waits forever for a `BLOCK_INIT`.
+- `src/api.ts` is the only network code; counting lives in `src/analysis.ts`
+  (React-free, tested); persistence in `src/memory.ts` runs on the
+  `blocks-react` token, not `initialize()`, and falls back to in-memory on any
+  refusal (the store refuses until the app is approved).
+- Storage collection names allow only `[a-z0-9_]`; renaming one, or changing
+  its visibility, starts it empty.
+- Layout uses `@container` queries on `.app`, not viewport media queries. Write
+  breakpoints as numbers (480/768/1024…); `var(--civitai-bp-*)` in a query
+  condition never matches.
 
 <!-- BEGIN civitai agent-setup — managed block, edits here are overwritten -->
 ## Building a Civitai App
