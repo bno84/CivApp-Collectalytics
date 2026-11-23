@@ -5,6 +5,9 @@ to them, and a stats snippet to paste into Civitai. A Civitai App port of the
 Collectalytics tab of
 [Civitai Artist Discovery](https://github.com/theevildarkmage-hue/Civitai-Artist-Discovery).
 
+**Status:** in development, waiting on critical features from Civitai (see
+[docs/upstream-wishlist.md](docs/upstream-wishlist.md)).
+
 ## Features
 
 - **Overview:** items collected, unique creators, the top five creators' share,
