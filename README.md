@@ -2,8 +2,7 @@
 
 Statistics for a Civitai collection: who you collect, how often you come back
 to them, and a stats snippet to paste into Civitai. A Civitai App port of the
-Collectalytics tab of
-[Civitai Artist Discovery](https://github.com/theevildarkmage-hue/Civitai-Artist-Discovery).
+Collectalytics tab of Civitai Artist Discovery.
 
 **Status:** in development, waiting on critical features from Civitai (see
 [docs/upstream-wishlist.md](docs/upstream-wishlist.md)).

@@ -1,7 +1,7 @@
 # Upstream wishlist
 
 What Collectalytics needs from Civitai's app platform to match the original
-[Civitai Artist Discovery](https://github.com/theevildarkmage-hue/Civitai-Artist-Discovery)
+Civitai Artist Discovery
 tab. Each item says what the app can do today, what is missing, and what
 would close the gap.
 
