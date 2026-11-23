@@ -190,7 +190,13 @@ function ReportView({ data, analysis, owned, creatorKey, onCreator, onRefresh }:
   const newestCreator = newest ? analysis.creators.get(newest.creatorKey)! : null;
   const pickCreator = (key: string) => {
     onCreator(key);
-    document.getElementById('ca-creator')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // Side by side with the lists (wide layout) the creator check is already in
+    // view. Only when it is stacked below them is it worth scrolling to.
+    const check = document.getElementById('ca-creator');
+    const first = check?.parentElement?.firstElementChild as HTMLElement | null;
+    if (check && first && check.offsetTop > first.offsetTop) {
+      check.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   };
   const values = { creators: analysis.creators.size.toLocaleString(), items: items.length.toLocaleString(), noun };
 
