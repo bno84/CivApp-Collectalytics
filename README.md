@@ -1,0 +1,161 @@
+# Collectalytics
+
+A Civitai App (Vite + React, config-as-code build).
+
+## What this is
+
+A sandboxed static web app served in an iframe by the Civitai host. The
+platform owns the build: it installs from the committed lockfile and then runs
+the `buildCommand` from `block.manifest.json` (`pnpm run build`), serving the
+static output from `outputDir` (`dist/`). You do NOT commit `dist/` — the
+platform builds it.
+
+**This project uses pnpm. Do not use npm.** Commit `pnpm-lock.yaml`: the
+platform installs *strictly* from it, with no registry re-resolve fallback, so
+builds are byte-reproducible. `buildCommand` must stay `pnpm run build` to match
+that lockfile. A lockfile that disagrees with `buildCommand` is the most common
+build failure there is — `pnpm exec civitai app validate` catches it before you
+submit.
+
+The Civitai CLI is a project devDependency, not a global install. Run it as
+`pnpm exec civitai <command>`.
+
+## The host handshake (`src/civitai-host.js`) — don't delete it
+
+This app declares a `page` surface, so the Civitai host mounts it full-viewport
+and **waits for it to say hello before revealing it**. That hello is a single
+`BLOCK_READY` message, and it is the only thing that flips the host into its
+ready state. An app that never sends it is replaced by a failure card once the
+host's bounded retries run out — even though the app itself works perfectly.
+
+`src/civitai-host.js` does exactly that and nothing else. `src/main.jsx`
+imports it first, for its side effect; leave both in place.
+
+Two details worth knowing, because they apply to every message you add later:
+
+- **Every block → host message is an envelope:** `{ type, payload }`. The host
+  reads `event.data.payload`, so fields put at the top level
+  (`{ type: 'X', height: 0 }`) arrive as `payload: undefined`.
+- **Answer, don't announce.** The ack is sent in *response* to the host's
+  `BLOCK_INIT`, addressed at the origin that init arrived from rather than
+  broadcast to `'*'`.
+
+> 🔒 **Before you handle any message that carries data, add an origin
+> allowlist.** `src/civitai-host.js` answers `window.parent` — whoever framed
+> you. That is fine for the ack, which carries no data and discloses nothing a
+> framing page doesn't already know. It is *not* fine for a token, a viewer,
+> storage, or a generation result: check `event.origin` against origins you
+> trust first, or any page that frames your app can feed it anything. The
+> emitter deliberately ships no allowlist — the real list (production, preview
+> subdomains, dev tunnels) is platform state that moves without notice, and
+> `@civitai/blocks-react` already maintains it from
+> `VITE_BLOCK_ALLOWED_PARENT_ORIGINS`. Adopt the SDK before you handle data.
+
+If you outgrow raw `postMessage`, `@civitai/blocks-react` covers all of this
+(and the rest of the protocol): its transport performs this same handshake
+internally.
+
+> ⚠️ **When you adopt the SDK, delete `src/civitai-host.js` in the SAME
+> change.** That is the one time removing it is correct, and running both is
+> worse than running neither. Whichever handshake answers the host's *first*
+> `BLOCK_INIT` cancels the host's retry loop **and** its readiness timeout, so
+> if this file wins the race the SDK's transport can be left never having seen
+> an init: it gives up after 10s while the host sits "ready", showing an app
+> that never started, with no retry and no error card.
+
+## Width-adaptive layout (`src/index.css`)
+
+Your app renders inside whatever slot the host gave it, and **slot width is not
+monotonic in viewport width** — the `model.sidebar_top` slot is about 360px next
+to a 360px phone and only about 430px next to a 1440px desktop. A viewport-based
+media query inside the frame therefore answers a question nobody asked, which is
+why this template ships none.
+
+`src/index.css` makes `.app` a **query container** (`container-type:
+inline-size`) and adapts `.app-actions` against the container's own width:
+
+```css
+.app-actions { flex-direction: column; }          /* narrow — the base state */
+
+@container block (min-width: 480px) {
+  .app-actions { flex-direction: row; }           /* wider */
+}
+```
+
+Narrow is the base state and widening is the override, on purpose: a block is
+narrow far more often than not, and that is also what a browser without
+`@container` support falls back to.
+
+The thresholds are Civitai's block breakpoint scale, in **CSS pixels**:
+`xs 480 · sm 768 · md 1024 · lg 1184 · xl 1440`. (Not Mantine's stock `em`
+scale — the two agree on `sm` and nowhere else.) 480 is the step this layout can
+actually cross, since `.app` is capped at `40rem`.
+
+> 🔴 **Write the pixel number out.** The design system publishes these as
+> `--civitai-bp-*` custom properties, and reaching for one in the condition of a
+> media or container query is the first thing most people try. It does not work:
+> a query's condition is evaluated before custom properties are substituted, so
+> the rule never matches — no error, no warning, green build, and a layout
+> silently stuck on one branch.
+
+Adopting `@civitai/blocks-react` later? Its `useBlockBreakpoint()` hook reports
+the same scale in JS, for decisions CSS cannot make — rendering a genuinely
+*different* element tree rather than restyling the same one. The `page-money`
+template (`civitai app init "…" --template page-money`) shows that form.
+
+Full guide: <https://developer.civitai.com/apps/guide/responsive>
+
+## Develop
+
+```bash
+pnpm install
+pnpm run dev      # http://localhost:5173
+```
+
+**There is no host behind `pnpm run dev`**, so nothing sends `BLOCK_INIT` and
+`src/civitai-host.js` stays silent — expected, not a bug. You are looking at
+your own UI; the handshake is exercised for real once the app runs on Civitai.
+(If you want to drive the protocol locally, the `page-money` template ships a
+mock host: `civitai app init "…" --template page-money`, then
+`pnpm run dev:harness`.)
+
+To see your local app inside the real Civitai host (dev tunnels are
+invite-only), serve it with `pnpm run dev:tunnel` in one terminal and run
+`civitai app dev-tunnel` in another. `dev:tunnel` serves on port 5186 and sends
+the headers that let any Civitai domain frame the app; plain `pnpm run dev` does not
+send them.
+
+Build locally to sanity-check what the platform will produce:
+
+```bash
+pnpm run build && pnpm run preview
+```
+
+## Validate
+
+```bash
+pnpm exec civitai app validate
+```
+
+## Submit
+
+```bash
+pnpm exec civitai login        # once, to store your API token
+pnpm exec civitai app submit
+```
+
+`submit` packages the SOURCE tree (manifest + src + build config), excluding
+`.git`, `node_modules`, and `dist` — the platform rebuilds from source.
+
+## Store-listing media (`assets/`)
+
+Your store listing **cannot publish without an icon and a cover**, and both are
+settable while the app is in review. `assets/` is scaffolded for them and ships
+with no images on purpose — see [`assets/README.md`](assets/README.md) for the
+size, format and aspect requirements, then:
+
+```bash
+pnpm exec civitai app listing set-icon  ./assets/icon.png
+pnpm exec civitai app listing set-cover ./assets/cover.png
+pnpm exec civitai app listing status
+```

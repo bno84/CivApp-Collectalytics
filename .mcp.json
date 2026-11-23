@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "civitai": {
+      "type": "http",
+      "url": "https://mcp.civitai.com/mcp"
+    },
+    "civitai-orchestration": {
+      "type": "http",
+      "url": "https://orchestration.civitai.com/mcp/v2"
+    }
+  }
+}

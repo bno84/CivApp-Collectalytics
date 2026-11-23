@@ -1,0 +1,4 @@
+allowBuilds:
+  # Both ship their platform binary as an optional dependency; the postinstall fallbacks are not needed.
+  '@civitai/cli': false
+  esbuild: false
