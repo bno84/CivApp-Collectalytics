@@ -42,11 +42,11 @@ API, which changes what can be counted:
 | Models, posts and articles counted | Images and videos only | The block API returns playable media only |
 | Follower count, total video length | Not shown | Not in the block API |
 | Review queue, accept with a thanks comment | Not ported | No app scope can accept collection items or post comments |
-| Image detail dialog | Opens the image on Civitai | Generation data is not in the block API |
+| Image detail dialog | Opens the image on Civitai | Preferred: Civitai's own image page |
 | Snippet edits and last-opened collection remembered | Kept for the visit only | The sandboxed frame has no storage; keeping them on Civitai would need the `apps:storage` scope |
 
-Contest-mode collections are served in a shuffled order, so their recency
-figures are not meaningful.
+Contest-mode collections are out of scope: Civitai serves them shuffled, so
+order-based figures do not apply.
 
 What Civitai would need to add to close these gaps is in
 [docs/upstream-wishlist.md](docs/upstream-wishlist.md).
