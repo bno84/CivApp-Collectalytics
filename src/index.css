@@ -14,25 +14,23 @@
   --ca-border: var(--civitai-color-border, #373a40);
   --ca-primary: var(--civitai-color-primary, #228be6);
   --ca-radius: var(--civitai-radius, 8px);
-  /* Two accents beside Civitai's blue, each with one job everywhere in the app:
-     pink marks what is NEW (creators new to the collection), amber marks the
-     creator in FOCUS (the one selected for the creator check). Picked from the
-     Mantine scales civitai.com uses and checked with the dataviz palette
-     validator against both surfaces: colourblind-safe, distinct to normal
-     vision. The light amber is under 3:1 on white, so it always sits beside a
-     text label. Status colours (success/warning/error) stay reserved. */
-  --ca-new: #e64980;
-  --ca-focus: #cc7a00;
-  --ca-new-soft: rgb(230 73 128 / 0.15);
-  --ca-focus-soft: rgb(204 122 0 / 0.14);
+  /* One accent beside Civitai's blue: gold marks what is NEW (creators new to
+     the collection). The chart gold is checked with the dataviz palette
+     validator against blue on both surfaces; text uses a brighter (dark) or
+     deeper (light) gold for reading contrast. Selection is a lighter blue.
+     Status colours (success/warning/error) stay reserved. */
+  --ca-gold: #b88a00;
+  --ca-gold-text: #fab005;
+  --ca-gold-soft: rgb(250 176 5 / 0.14);
   --ca-primary-soft: var(--civitai-color-primary-light, rgb(34 139 230 / 0.15));
+  --ca-selected: #74c0fc;
 }
 
 [data-theme='light'] {
-  --ca-new: #d6336c;
-  --ca-focus: #e67700;
-  --ca-new-soft: rgb(214 51 108 / 0.1);
-  --ca-focus-soft: rgb(230 119 0 / 0.12);
+  --ca-gold: #c98c00;
+  --ca-gold-text: #946800;
+  --ca-gold-soft: rgb(201 140 0 / 0.12);
+  --ca-selected: #4dabf7;
 }
 
 * {
@@ -98,7 +96,7 @@ button:focus-visible,
 }
 
 .ca-note-new {
-  color: var(--ca-new);
+  color: var(--ca-gold-text);
   font-size: 0.875rem;
 }
 
@@ -121,8 +119,8 @@ button:focus-visible,
 }
 
 .ca-tag-following {
-  background: var(--ca-new-soft);
-  color: var(--ca-new);
+  background: var(--ca-gold-soft);
+  color: var(--ca-gold-text);
 }
 
 .ca-error {
@@ -220,18 +218,6 @@ button:focus-visible,
   min-width: 0;
 }
 
-.ca-stat-primary {
-  box-shadow: inset 3px 0 0 var(--ca-primary);
-}
-
-.ca-stat-new {
-  box-shadow: inset 3px 0 0 var(--ca-new);
-}
-
-.ca-stat-focus {
-  box-shadow: inset 3px 0 0 var(--ca-focus);
-}
-
 .ca-stat strong {
   font-size: 1.375rem;
   line-height: 1.2;
@@ -242,10 +228,6 @@ button:focus-visible,
 
 .ca-stat span {
   color: var(--ca-dimmed);
-  font-size: 0.8125rem;
-}
-
-.ca-footnote {
   font-size: 0.8125rem;
 }
 
@@ -279,7 +261,7 @@ button:focus-visible,
 }
 
 .ca-bar-new {
-  fill: var(--ca-new);
+  fill: var(--ca-gold);
 }
 
 .ca-bar-returning.dim,
@@ -308,7 +290,7 @@ button:focus-visible,
 }
 
 .ca-swatch-new {
-  background: var(--ca-new);
+  background: var(--ca-gold);
 }
 
 .ca-swatch-returning {
@@ -436,7 +418,7 @@ button:focus-visible,
 }
 
 .ca-recent li.selected {
-  background: var(--ca-focus-soft);
+  background: var(--ca-primary-soft);
 }
 
 .ca-recent li > div {
@@ -477,11 +459,11 @@ button:focus-visible,
 }
 
 .ca-bar-row.selected {
-  background: var(--ca-focus-soft);
+  background: var(--ca-primary-soft);
 }
 
 .ca-bar-row.selected .ca-bar-track span {
-  background: var(--ca-focus);
+  background: var(--ca-selected);
 }
 
 .ca-bar-name {
@@ -531,7 +513,6 @@ button:focus-visible,
 .ca-creator-name {
   font-size: 1.125rem;
   font-weight: 600;
-  color: var(--ca-focus);
 }
 
 .ca-timeline svg {
@@ -546,7 +527,7 @@ button:focus-visible,
 }
 
 .ca-dot {
-  fill: var(--ca-focus);
+  fill: var(--ca-selected);
   stroke: var(--ca-surface);
   stroke-width: 2;
 }

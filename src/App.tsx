@@ -165,10 +165,7 @@ function Collectalytics({ api }: { api: ApiClient }) {
             <Button type="submit" variant="light" disabled={!linkId || busy}>Open</Button>
           </form>
         </div>
-        <p className="ca-dimmed">
-          Civitai lists only your own collections to apps. Open a collection you follow by its link and it joins
-          the list under <span className="ca-tag ca-tag-following">Following</span> for this visit.
-        </p>
+        <p className="ca-dimmed">Apps only see your own collections. Open one you follow by link to add it here.</p>
         {mineError && <Alert color="error" title="Could not list your collections">{mineError}</Alert>}
         {!mineComplete && (
           <p className="ca-dimmed">Civitai stopped listing your collections early; some may be missing. Open one by link instead.</p>
@@ -236,17 +233,14 @@ function ReportView({ data, analysis, owned, creatorKey, onCreator, onRefresh }:
           <Button variant="subtle" size="sm" onClick={onRefresh}>Refresh</Button>
         </div>
         <div className="ca-stats">
-          <StatTile tone="primary" value={items.length.toLocaleString()} label={`${noun} collected`} />
-          <StatTile tone="new" value={analysis.creators.size.toLocaleString()} label="unique creators" />
+          <StatTile value={items.length.toLocaleString()} label={`${noun} collected`} />
+          <StatTile value={analysis.creators.size.toLocaleString()} label="unique creators" />
           <StatTile value={`${(topShare(analysis, 5) * 100).toFixed(0)}%`} label="from the top five creators" />
-          {newestCreator && <StatTile tone="focus" value={newestCreator.name} label="added most recently" />}
+          {newestCreator && <StatTile value={newestCreator.name} label="added most recently" />}
         </div>
-        <p className="ca-dimmed ca-footnote">
-          {plural(items.length, 'accepted item')} read at {data.fetchedAt.toLocaleTimeString(undefined, { timeStyle: 'short' })}.
-          {!data.complete && ' Civitai did not hand over the whole collection, so only the most recently added items read are counted.'}
-          {' '}Counts cover images and videos you can view on this site. Civitai does not give apps the date each was added, so recency is
-          measured in additions, newest first. Contest collections are served shuffled, so for those the order-based figures do not apply.
-        </p>
+        {!data.complete && (
+          <p className="ca-dimmed">Only the {plural(items.length, 'most recent item')} could be read.</p>
+        )}
       </Card>
 
       {items.length > 0 ? (

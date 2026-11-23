@@ -16,7 +16,7 @@ export function RecentPicks({ analysis, complete, selected, onCreator }:
   { analysis: Analysis; complete: boolean; selected: string | null; onCreator: (key: string) => void }) {
   return (
     <Card className="ca-card">
-      <SectionTitle note="Newest first, with how long since that creator's previous pick.">Recently added</SectionTitle>
+      <SectionTitle>Recently added</SectionTitle>
       <ol className="ca-recent">
         {analysis.items.slice(0, RECENT).map(entry => {
           const creator = analysis.creators.get(entry.creatorKey)!;
@@ -92,7 +92,7 @@ export function CreatorLookup({ analysis, selected, onCreator }:
 
   return (
     <Card className="ca-card" id="ca-creator">
-      <SectionTitle note="What have I added from them lately?">Creator check</SectionTitle>
+      <SectionTitle>Creator check</SectionTitle>
       <TextInput label="Creator" placeholder="Type a username" list="ca-creator-names" value={text}
         onChange={event => find(event.currentTarget.value)} onBlur={() => setTyped(null)} />
       <datalist id="ca-creator-names">

@@ -51,7 +51,6 @@ export function AdditionsChart({ analysis, complete }: { analysis: Analysis; com
   const column = (width - LEFT - 4) / Math.max(1, rows.length);
   const bar = Math.max(3, Math.min(column - 3, 28));
   const every = Math.max(1, Math.ceil(64 / column));
-  const busiest = rows.reduce<Block | null>((best, row) => (row.newCreators > (best?.newCreators ?? -1) ? row : best), null);
   const label = (row: Block) => `Additions ${(total - row.end).toLocaleString()}–${(total - row.start).toLocaleString()}`;
   const choose = (row: Block) => setSelected(current => (current === row.number ? null : row.number));
   const chosen = rows.find(row => row.number === selected) ?? null;
@@ -60,9 +59,8 @@ export function AdditionsChart({ analysis, complete }: { analysis: Analysis; com
   if (!rows.length) return null;
   return (
     <Card className="ca-card">
-      <SectionTitle note={`Oldest additions on the left, in blocks of ${size.toLocaleString()}. ` +
-        (complete ? '' : `Only the ${total.toLocaleString()} most recent additions were read, so "new" means new among those. `) +
-        (busiest?.newCreators ? `Most new names: ${label(busiest).toLowerCase()}, with ${plural(busiest.newCreators, 'new creator')}.` : '')}>
+      <SectionTitle note={`Blocks of ${size.toLocaleString()} additions, oldest on the left.` +
+        (complete ? '' : ' "New" means new among the items read.')}>
         Additions over the collection's life
       </SectionTitle>
       <ul className="ca-legend" aria-label="Legend">
