@@ -103,6 +103,7 @@ message, so "Copy for Civitai" works reliably with rich HTML.
 ## Out of scope
 
 - **Contest-mode collections.** They are served shuffled, so order-based
-  figures do not apply to them. Not a target for this app.
+  figures do not apply to them. They still open, as a known quirk, but
+  supporting them properly is not a target for this app.
 - **Image generation details.** Opening the image on Civitai is the preferred
   experience, so no in-app detail view is planned.
