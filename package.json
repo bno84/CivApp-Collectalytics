@@ -36,5 +36,10 @@
       "onFail": "download"
     }
   },
-  "description": "Collectalytics: statistics for a Civitai collection — who you collect, how often, and a stats snippet to share."
+  "description": "Collectalytics: statistics for a Civitai collection — who you collect, how often, and a stats snippet to share.",
+  "license": "AGPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bno84/CivApp-Collectalytics.git"
+  }
 }

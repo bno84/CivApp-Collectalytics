@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useBlockContext, useBlockResize, useRequestSignIn } from '@civitai/blocks-react';
@@ -13,6 +14,8 @@ import { CivitaiLink, OpenProvider, StatTile, profilePath } from './components/c
 import { CreatorLookup, RecentPicks, TopCreators } from './components/Creators.js';
 import { SnippetEditor } from './components/SnippetEditor.js';
 import type { Memory, RecentCollection } from './memory.js';
+
+const SOURCE_URL = 'https://github.com/bno84/CivApp-Collectalytics';
 
 type Report =
   | { status: 'idle' }
@@ -55,6 +58,12 @@ export function App({ api, memory }: { api: ApiClient; memory: Memory }) {
           <p className="ca-dimmed">Who you collect, how often, and a stats blurb to share.</p>
         </header>
         {body}
+        {/* AGPL-3.0 §13: offer the source to everyone who uses the app. The
+            sandbox allows no popups, so the URL is plain selectable text. */}
+        <footer className="ca-footer ca-dimmed">
+          Free software under AGPL-3.0-or-later. Source:{' '}
+          <span className="ca-source-url">{SOURCE_URL}</span>
+        </footer>
       </main>
     </OpenProvider>
   );

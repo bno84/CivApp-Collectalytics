@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // The one network boundary: Civitai's block collection routes, read with the
 // block token the host mints for this app.
 //

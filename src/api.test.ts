@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { createHttpClient, parseRetryAfter, readCollection, type ApiClient, type CollectionPage } from './api.js';

@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
 /* Styling on top of the design-system pack (injectBlocksStyles in main.tsx).
    Colours come from its --civitai-* tokens, which follow data-theme, so light
    and dark need no rules of their own. The literal fallbacks are the dark
@@ -623,4 +624,14 @@ button:focus-visible,
   .ca-columns > :nth-child(3) {
     grid-column: auto;
   }
+}
+
+.ca-footer {
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.ca-source-url {
+  user-select: all;
+  overflow-wrap: anywhere;
 }

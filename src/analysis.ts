@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Collectalytics' counting, kept free of React so it can be tested on its own.
 //
 // Civitai's block API gives a collection's items newest added first but without

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // Development only: the SDK's mock host (BLOCK_INIT, a signed-in viewer, theme)
 // and an in-memory stand-in for Civitai's collection routes, shaped like them.
 import { getTransport } from '@civitai/blocks-react';

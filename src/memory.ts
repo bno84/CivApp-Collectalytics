@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 // What the app remembers for a viewer between visits: the collection they had
 // open, their edited stats snippets and the public collections they opened by
 // link. It lives in private collections of Civitai's document store (see block.manifest.json),
