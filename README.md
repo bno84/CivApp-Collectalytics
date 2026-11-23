@@ -49,6 +49,9 @@ API, which changes what can be counted:
 Contest-mode collections are served in a shuffled order, so their recency
 figures are not meaningful.
 
+What Civitai would need to add to close these gaps is in
+[docs/upstream-wishlist.md](docs/upstream-wishlist.md).
+
 ## How it is built
 
 - `src/api.ts`: the only network code. Calls the block routes on the host origin

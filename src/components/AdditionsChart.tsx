@@ -37,7 +37,8 @@ export function AdditionsChart({ analysis, complete }: { analysis: Analysis; com
     if (!node) return;
     if (node.clientWidth > 0) setWidth(node.clientWidth);
     const observer = new ResizeObserver(([entry]) => {
-      const measured = Math.round(entry.contentRect.width);
+      // Floored so the SVG is never wider than its frame and never rescaled.
+      const measured = Math.floor(entry.contentRect.width);
       if (measured > 0) setWidth(measured);
     });
     observer.observe(node);
@@ -49,12 +50,13 @@ export function AdditionsChart({ analysis, complete }: { analysis: Analysis; com
   const tick = Math.max(1, Math.ceil(max / 4));
   const ceiling = tick * Math.ceil(max / tick);
   const column = (width - LEFT - 4) / Math.max(1, rows.length);
-  const bar = Math.max(3, Math.min(column - 3, 28));
+  // Bars and lines land on whole pixels; a fractional edge is drawn blurred.
+  const bar = Math.round(Math.max(3, Math.min(column - 3, 28)));
   const every = Math.max(1, Math.ceil(64 / column));
   const label = (row: Block) => `Additions ${(total - row.end).toLocaleString()}–${(total - row.start).toLocaleString()}`;
   const choose = (row: Block) => setSelected(current => (current === row.number ? null : row.number));
   const chosen = rows.find(row => row.number === selected) ?? null;
-  const y = (value: number) => TOP + plot - (value / ceiling) * plot;
+  const y = (value: number) => Math.round(TOP + plot - (value / ceiling) * plot);
 
   if (!rows.length) return null;
   return (
@@ -72,12 +74,13 @@ export function AdditionsChart({ analysis, complete }: { analysis: Analysis; com
           aria-label={`Items added per block of ${size}, split by new and returning creators. ${rows.length} blocks.`}>
           {Array.from({ length: ceiling / tick + 1 }, (_, i) => i * tick).map(value => (
             <g key={value}>
-              <line x1={LEFT} x2={width - 4} y1={y(value)} y2={y(value)} className={value ? 'ca-grid' : 'ca-axis'} />
+              <line x1={LEFT} x2={width - 4} y1={y(value) + 0.5} y2={y(value) + 0.5} className={value ? 'ca-grid' : 'ca-axis'}
+                shapeRendering="crispEdges" />
               <text x={LEFT - 6} y={y(value) + 4} textAnchor="end" className="ca-tick">{value}</text>
             </g>
           ))}
           {rows.map((row, i) => {
-            const x = LEFT + i * column + (column - bar) / 2;
+            const x = Math.round(LEFT + i * column + (column - bar) / 2);
             const fresh = row.newCreatorItems;
             const returning = row.items - fresh;
             const freshTop = y(fresh);

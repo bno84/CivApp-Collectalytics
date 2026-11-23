@@ -15,11 +15,12 @@
   --ca-primary: var(--civitai-color-primary, #228be6);
   --ca-radius: var(--civitai-radius, 8px);
   /* One accent beside Civitai's blue: gold marks what is NEW (creators new to
-     the collection). The chart gold is checked with the dataviz palette
-     validator against blue on both surfaces; text uses a brighter (dark) or
-     deeper (light) gold for reading contrast. Selection is a lighter blue.
+     the collection). Civitai's yellow, chosen by eye: the dataviz palette
+     validator passes it beside blue for colourblind and normal vision on both
+     surfaces, though it sits lighter than its lightness band. The light-theme
+     text gold is deeper for reading contrast. Selection is a lighter blue.
      Status colours (success/warning/error) stay reserved. */
-  --ca-gold: #b88a00;
+  --ca-gold: #fab005;
   --ca-gold-text: #fab005;
   --ca-gold-soft: rgb(250 176 5 / 0.14);
   --ca-primary-soft: var(--civitai-color-primary-light, rgb(34 139 230 / 0.15));
@@ -27,7 +28,7 @@
 }
 
 [data-theme='light'] {
-  --ca-gold: #c98c00;
+  --ca-gold: #f59f00;
   --ca-gold-text: #946800;
   --ca-gold-soft: rgb(201 140 0 / 0.12);
   --ca-selected: #4dabf7;
@@ -239,7 +240,6 @@ button:focus-visible,
 
 .ca-chart svg {
   display: block;
-  max-width: 100%;
 }
 
 .ca-grid {

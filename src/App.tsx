@@ -5,7 +5,7 @@ import { Alert, Button, Card, Group, Loader, Select, Stack, TextInput } from '@c
 
 import { analyse, itemNoun, plural, topShare, type Analysis } from './analysis.js';
 import {
-  parseCollectionRef, readCollection, readMyCollections, type ApiClient, type CollectionDetail, type CollectionRead,
+  parseCollectionRef, readCollection, readMyCollections, type ApiClient, type CollectionRead,
   type CollectionSummary,
 } from './api.js';
 import { AdditionsChart } from './components/AdditionsChart.js';
@@ -67,9 +67,6 @@ function Collectalytics({ api }: { api: ApiClient }) {
   const [linkText, setLinkText] = useState('');
   const [report, setReport] = useState<Report>({ status: 'idle' });
   const [creatorKey, setCreatorKey] = useState<string | null>(null);
-  // Collections not of the viewer's own, opened by link this visit. Civitai
-  // lists only owned collections to apps, so this is how followed ones appear.
-  const [opened, setOpened] = useState<Map<number, CollectionDetail>>(() => new Map());
   const reading = useRef<AbortController | null>(null);
   const listing = useRef<AbortController | null>(null);
   // Set once the viewer (or the first load) has opened something, so a list
@@ -90,7 +87,6 @@ function Collectalytics({ api }: { api: ApiClient }) {
       });
       if (controller.signal.aborted) return;
       const analysis = analyse(data.items);
-      setOpened(current => new Map(current).set(data.collection.id, data.collection));
       setReport({ status: 'ready', data, analysis });
       // Opens on whoever was added last: the question is usually about the newest pick.
       setCreatorKey(analysis.items[0]?.creatorKey ?? null);
@@ -128,18 +124,10 @@ function Collectalytics({ api }: { api: ApiClient }) {
 
   const linkId = parseCollectionRef(linkText);
   const ownedIds = useMemo(() => new Set((mine ?? []).map(item => item.id)), [mine]);
-  const groups = useMemo(() => {
-    const others = [...opened.values()].filter(item => !ownedIds.has(item.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    const byLink = (item: CollectionDetail) => `${item.name} — ${item.curator.username ?? 'unknown'}`;
-    return [
-      { label: 'Yours', options: (mine ?? []).map(item => ({
-        value: String(item.id), label: `${item.name}${item.isPublic ? '' : ' (private)'} · ${item.itemCount.toLocaleString()}` })) },
-      { label: 'Following', options: others.filter(item => item.followed).map(item => ({ value: String(item.id), label: byLink(item) })) },
-      { label: 'Other public', options: others.filter(item => !item.followed).map(item => ({ value: String(item.id), label: byLink(item) })) },
-    ].filter(group => group.options.length);
-  }, [mine, opened, ownedIds]);
-  const known = groups.some(group => group.options.some(option => option.value === String(selected)));
+  const options = (mine ?? []).map(item => ({
+    value: String(item.id),
+    label: `${item.name}${item.isPublic ? '' : ' (private)'} · ${item.itemCount.toLocaleString()}`,
+  }));
 
   const busy = report.status === 'loading';
   return (
@@ -147,25 +135,19 @@ function Collectalytics({ api }: { api: ApiClient }) {
       <Card className="ca-card">
         <div className="ca-picker">
           <Select
-            label="Collection"
-            placeholder={mine === null ? 'Reading your collections…' : 'Pick a collection'}
-            value={selected != null && known ? String(selected) : ''}
-            disabled={!groups.length}
+            label="Your collections"
+            placeholder={mine === null ? 'Reading your collections…' : mine.length ? 'Pick a collection' : 'No collections of your own'}
+            value={selected != null && ownedIds.has(selected) ? String(selected) : ''}
+            options={options}
+            disabled={!options.length}
             onChange={value => open(Number(value))}
-          >
-            {groups.map(group => (
-              <optgroup key={group.label} label={group.label}>
-                {group.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
-              </optgroup>
-            ))}
-          </Select>
+          />
           <form className="ca-link-form" onSubmit={event => { event.preventDefault(); if (linkId) { open(linkId); setLinkText(''); } }}>
-            <TextInput label="Open by link" placeholder="Paste a collection link or ID" value={linkText}
+            <TextInput label="Or any public collection" placeholder="Paste a collection link or ID" value={linkText}
               onChange={event => setLinkText(event.currentTarget.value)} />
             <Button type="submit" variant="light" disabled={!linkId || busy}>Open</Button>
           </form>
         </div>
-        <p className="ca-dimmed">Apps only see your own collections. Open one you follow by link to add it here.</p>
         {mineError && <Alert color="error" title="Could not list your collections">{mineError}</Alert>}
         {!mineComplete && (
           <p className="ca-dimmed">Civitai stopped listing your collections early; some may be missing. Open one by link instead.</p>
