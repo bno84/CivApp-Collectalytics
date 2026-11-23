@@ -12,8 +12,8 @@ const TOP_CREATORS = 20;
 const CREATOR_THUMBS = 36;
 const percent = (share: number) => `${(share * 100).toFixed(1)}%`;
 
-export function RecentPicks({ analysis, complete, onCreator }:
-  { analysis: Analysis; complete: boolean; onCreator: (key: string) => void }) {
+export function RecentPicks({ analysis, complete, selected, onCreator }:
+  { analysis: Analysis; complete: boolean; selected: string | null; onCreator: (key: string) => void }) {
   return (
     <Card className="ca-card">
       <SectionTitle note="Newest first, with how long since that creator's previous pick.">Recently added</SectionTitle>
@@ -23,11 +23,11 @@ export function RecentPicks({ analysis, complete, onCreator }:
           const previous = previousFromCreator(analysis, entry);
           const gap = previous ? previous.index - entry.index : null;
           return (
-            <li key={entry.mediaId}>
+            <li key={entry.mediaId} className={creator.key === selected ? 'selected' : undefined}>
               <Thumb entry={entry} />
               <div>
                 <button type="button" className="ca-link ca-strong" onClick={() => onCreator(creator.key)}>{creator.name}</button>
-                <small className={gap !== null && gap <= RECENT ? 'ca-accent' : 'ca-dimmed'}>
+                <small className={gap === null ? 'ca-note-new' : gap <= RECENT ? 'ca-accent' : 'ca-dimmed'}>
                   {gap === null
                     ? `${complete ? 'First from them' : 'First from them in the items read'}${creator.items.length === 1 ? '' : ` · ${creator.items.length} in all`}`
                     : `Previous from them ${plural(gap, 'addition')} earlier · ${creator.items.length} in all`}

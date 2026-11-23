@@ -46,7 +46,7 @@ describe('analyse', () => {
 describe('blocks', () => {
   it('counts first appearances oldest first, with a partial newest block', () => {
     const result = blocks(analyse(sample()), 4);
-    expect(result.map(b => [b.items, b.newCreators])).toEqual([[4, 3], [2, 0]]);
+    expect(result.map(b => [b.items, b.newCreators, b.newCreatorItems])).toEqual([[4, 3, 4], [2, 0, 0]]);
     expect(result[0]).toMatchObject({ end: 5, start: 2 });
     expect(result[1]).toMatchObject({ end: 1, start: 0 });
   });

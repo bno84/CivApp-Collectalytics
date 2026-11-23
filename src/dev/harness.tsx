@@ -34,7 +34,8 @@ function sampleItems(count: number, seed: number, videoShare: number): MediaItem
   });
 }
 
-const COLLECTIONS: { detail: CollectionDetail; items: MediaItem[] }[] = [
+// Owned by the dev viewer, so `mode=mine` lists them.
+const OWNED: { detail: CollectionDetail; items: MediaItem[] }[] = [
   { detail: { id: 101, name: 'Music Focus 🎸', description: null, curator: { userId: 1, username: 'dev-viewer' }, isPublic: true, followed: false },
     items: sampleItems(640, 101, 1) },
   { detail: { id: 102, name: 'Cozy interiors', description: null, curator: { userId: 1, username: 'dev-viewer' }, isPublic: true, followed: false },
@@ -43,13 +44,22 @@ const COLLECTIONS: { detail: CollectionDetail; items: MediaItem[] }[] = [
     items: [] },
 ];
 
+// Someone else's, reachable only by link, as on Civitai: try 201 (followed) and 202.
+const OTHERS: { detail: CollectionDetail; items: MediaItem[] }[] = [
+  { detail: { id: 201, name: 'Neon cities', description: null, curator: { userId: 77, username: 'skyline_kat' }, isPublic: true, followed: true },
+    items: sampleItems(420, 201, 0.2) },
+  { detail: { id: 202, name: 'Retro mecha', description: null, curator: { userId: 78, username: 'boltwright' }, isPublic: true, followed: false },
+    items: sampleItems(95, 202, 0) },
+];
+const COLLECTIONS = [...OWNED, ...OTHERS];
+
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 const fakeApi: ApiClient = {
   async listMine() {
     await delay(200);
     return {
-      items: COLLECTIONS.map(({ detail, items }) => ({
+      items: OWNED.map(({ detail, items }) => ({
         ...detail, coverImageUrl: null, itemCount: items.length,
       })),
     };

@@ -54,9 +54,10 @@ export function Thumb({ entry, caption }: { entry: Entry; caption?: string }) {
   );
 }
 
-export function StatTile({ value, label }: { value: ReactNode; label: ReactNode }) {
+export function StatTile({ value, label, tone }:
+  { value: ReactNode; label: ReactNode; tone?: 'primary' | 'new' | 'focus' }) {
   return (
-    <div className="ca-stat">
+    <div className={`ca-stat${tone ? ` ca-stat-${tone}` : ''}`}>
       <strong>{value}</strong>
       <span>{label}</span>
     </div>

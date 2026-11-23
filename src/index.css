@@ -14,6 +14,25 @@
   --ca-border: var(--civitai-color-border, #373a40);
   --ca-primary: var(--civitai-color-primary, #228be6);
   --ca-radius: var(--civitai-radius, 8px);
+  /* Two accents beside Civitai's blue, each with one job everywhere in the app:
+     pink marks what is NEW (creators new to the collection), amber marks the
+     creator in FOCUS (the one selected for the creator check). Picked from the
+     Mantine scales civitai.com uses and checked with the dataviz palette
+     validator against both surfaces: colourblind-safe, distinct to normal
+     vision. The light amber is under 3:1 on white, so it always sits beside a
+     text label. Status colours (success/warning/error) stay reserved. */
+  --ca-new: #e64980;
+  --ca-focus: #cc7a00;
+  --ca-new-soft: rgb(230 73 128 / 0.15);
+  --ca-focus-soft: rgb(204 122 0 / 0.14);
+  --ca-primary-soft: var(--civitai-color-primary-light, rgb(34 139 230 / 0.15));
+}
+
+[data-theme='light'] {
+  --ca-new: #d6336c;
+  --ca-focus: #e67700;
+  --ca-new-soft: rgb(214 51 108 / 0.1);
+  --ca-focus-soft: rgb(230 119 0 / 0.12);
 }
 
 * {
@@ -27,7 +46,7 @@ body {
 }
 
 .app {
-  max-width: 64rem;
+  max-width: 100rem;
   margin: 0 auto;
   padding: 1.5rem 1rem 2rem;
   /* A query container: the slot's width, not the viewport's, decides the
@@ -76,6 +95,34 @@ button:focus-visible,
 .ca-accent {
   color: var(--ca-primary);
   font-size: 0.875rem;
+}
+
+.ca-note-new {
+  color: var(--ca-new);
+  font-size: 0.875rem;
+}
+
+/* Small labels for a collection's relation to the viewer. */
+.ca-tag {
+  display: inline-block;
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: var(--ca-surface-2);
+  color: var(--ca-dimmed);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.ca-tag-yours {
+  background: var(--ca-primary-soft);
+  color: var(--ca-primary);
+}
+
+.ca-tag-following {
+  background: var(--ca-new-soft);
+  color: var(--ca-new);
 }
 
 .ca-error {
@@ -173,6 +220,18 @@ button:focus-visible,
   min-width: 0;
 }
 
+.ca-stat-primary {
+  box-shadow: inset 3px 0 0 var(--ca-primary);
+}
+
+.ca-stat-new {
+  box-shadow: inset 3px 0 0 var(--ca-new);
+}
+
+.ca-stat-focus {
+  box-shadow: inset 3px 0 0 var(--ca-focus);
+}
+
 .ca-stat strong {
   font-size: 1.375rem;
   line-height: 1.2;
@@ -215,13 +274,45 @@ button:focus-visible,
   font-size: 11px;
 }
 
-.ca-bar {
+.ca-bar-returning {
   fill: var(--ca-primary);
-  fill-opacity: 0.75;
 }
 
-.ca-bar.selected {
-  fill-opacity: 1;
+.ca-bar-new {
+  fill: var(--ca-new);
+}
+
+.ca-bar-returning.dim,
+.ca-bar-new.dim {
+  fill-opacity: 0.35;
+}
+
+.ca-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+  color: var(--ca-dimmed);
+}
+
+.ca-swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: 0.375rem;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+
+.ca-swatch-new {
+  background: var(--ca-new);
+}
+
+.ca-swatch-returning {
+  background: var(--ca-primary);
 }
 
 .ca-hit {
@@ -337,9 +428,15 @@ button:focus-visible,
 
 .ca-recent li {
   display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
+  grid-template-columns: 56px minmax(0, 1fr);
   align-items: center;
   gap: 0.75rem;
+  padding: 0.25rem;
+  border-radius: var(--ca-radius);
+}
+
+.ca-recent li.selected {
+  background: var(--ca-focus-soft);
 }
 
 .ca-recent li > div {
@@ -375,9 +472,16 @@ button:focus-visible,
   cursor: pointer;
 }
 
-.ca-bar-row:hover,
-.ca-bar-row.selected {
+.ca-bar-row:hover {
   background: var(--ca-surface-2);
+}
+
+.ca-bar-row.selected {
+  background: var(--ca-focus-soft);
+}
+
+.ca-bar-row.selected .ca-bar-track span {
+  background: var(--ca-focus);
 }
 
 .ca-bar-name {
@@ -427,6 +531,7 @@ button:focus-visible,
 .ca-creator-name {
   font-size: 1.125rem;
   font-weight: 600;
+  color: var(--ca-focus);
 }
 
 .ca-timeline svg {
@@ -441,7 +546,7 @@ button:focus-visible,
 }
 
 .ca-dot {
-  fill: var(--ca-primary);
+  fill: var(--ca-focus);
   stroke: var(--ca-surface);
   stroke-width: 2;
 }
@@ -517,7 +622,22 @@ button:focus-visible,
     align-items: start;
   }
 
+  /* Two columns: the creator check takes the full row under the lists. */
+  .ca-columns > :nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
   .ca-thumbs {
     grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  }
+}
+
+@container block (min-width: 1184px) {
+  .ca-columns {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.25fr);
+  }
+
+  .ca-columns > :nth-child(3) {
+    grid-column: auto;
   }
 }

@@ -77,7 +77,10 @@ export interface Block {
   start: number;
   end: number;
   items: number;
+  /** Creators whose first item in the collection falls in this block. */
   newCreators: number;
+  /** Items in this block from those creators. */
+  newCreatorItems: number;
 }
 
 const NICE = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000];
@@ -89,24 +92,28 @@ export function blockSize(total: number, bars = 40): number {
 }
 
 /**
- * The collection in blocks of `size` additions, oldest first, with how many
- * creators made their first appearance in each. The newest block may be partial.
+ * The collection in blocks of `size` additions, oldest first: how many creators
+ * made their first appearance in each, and how many of the block's items came
+ * from them. The newest block may be partial.
  */
 export function blocks(analysis: Analysis, size: number): Block[] {
   const total = analysis.items.length;
   const result: Block[] = [];
-  const met = new Set<string>();
+  const firstBlock = new Map<string, number>();
   for (let chrono = 0; chrono < total; chrono++) {
     const entry = analysis.items[total - 1 - chrono];
     const number = Math.floor(chrono / size);
-    if (!result[number]) result[number] = { number, start: entry.index, end: entry.index, items: 0, newCreators: 0 };
+    if (!result[number]) {
+      result[number] = { number, start: entry.index, end: entry.index, items: 0, newCreators: 0, newCreatorItems: 0 };
+    }
     const block = result[number];
     block.start = entry.index;
     block.items++;
-    if (!met.has(entry.creatorKey)) {
-      met.add(entry.creatorKey);
+    if (!firstBlock.has(entry.creatorKey)) {
+      firstBlock.set(entry.creatorKey, number);
       block.newCreators++;
     }
+    if (firstBlock.get(entry.creatorKey) === number) block.newCreatorItems++;
   }
   return result;
 }
