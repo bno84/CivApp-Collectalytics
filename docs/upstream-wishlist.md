@@ -33,7 +33,9 @@ their own. Pasting links is a poor substitute.
 ### 2. When each item was added
 
 **Today:** items come newest-added first, but without `CollectionItem.createdAt`.
-The app counts recency in additions ("12 additions ago") instead of time.
+The app counts recency in additions ("12 additions ago") instead of time, and
+shows the additions-per-day chart as a faded placeholder marked "Waiting on
+Civitai".
 
 **Want:** an `addedAt` field on each item in `GET /blocks/collections/{id}`.
 The value is already selected by `getCollectionItemsByCollectionId`.

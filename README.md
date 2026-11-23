@@ -9,9 +9,8 @@ snippet to paste into Civitai. It is a port of the Collectalytics tab of
 
 - **Overview:** items collected, unique creators, the top five creators' share,
   and who was added most recently.
-- **New creators over the collection's life:** a bar chart of how many creators
-  first appear in each block of additions, oldest first. Click a bar to see the
-  items in that block.
+- **Additions per day:** shown as a faded placeholder marked "Waiting on
+  Civitai", until the app API gives the date each item was added.
 - **Recently added:** the 15 newest items, with how many additions ago that
   creator's previous pick was.
 - **Top creators:** ranked by item count.
@@ -37,7 +36,7 @@ API, which changes what can be counted:
 
 | Discovery | Here | Why |
 |---|---|---|
-| Dates: items per day/week, "added 3 days ago" | Positions: "added 12 additions ago", new creators per block of additions | Items arrive newest-added first, but without the date each was added |
+| Dates: items per day/week, "added 3 days ago" | Positions: "added 12 additions ago"; the per-day chart is a placeholder | Items arrive newest-added first, but without the date each was added |
 | Owned **and followed** collections in the picker | Owned collections; any public one opens by link or ID | `mode=mine` lists owned collections only |
 | Private collections | Not read | Needs the consent-gated `collections:read:private`; left out to keep permissions minimal |
 | Models, posts and articles counted | Images and videos only | The block API returns playable media only |

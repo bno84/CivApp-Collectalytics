@@ -233,7 +233,7 @@ function ReportView({ data, analysis, owned, creatorKey, onCreator, onRefresh }:
 
       {items.length > 0 ? (
         <>
-          <AdditionsChart key={collection.id} analysis={analysis} complete={data.complete} />
+          <AdditionsChart />
           <div className="ca-columns">
             <RecentPicks analysis={analysis} complete={data.complete} selected={creatorKey} onCreator={pickCreator} />
             <TopCreators analysis={analysis} selected={creatorKey} onCreator={pickCreator} />

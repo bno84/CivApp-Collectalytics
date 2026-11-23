@@ -70,54 +70,6 @@ export function medianGap(creator: Creator): number | null {
   return gaps[Math.floor(gaps.length / 2)];
 }
 
-export interface Block {
-  /** Oldest block first. */
-  number: number;
-  /** Item positions covered, newest-first indexing: from `end` (older) to `start`. */
-  start: number;
-  end: number;
-  items: number;
-  /** Creators whose first item in the collection falls in this block. */
-  newCreators: number;
-  /** Items in this block from those creators. */
-  newCreatorItems: number;
-}
-
-const NICE = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000];
-
-/** A round block size giving at most `bars` blocks. */
-export function blockSize(total: number, bars = 40): number {
-  const wanted = Math.ceil(total / bars);
-  return NICE.find(size => size >= wanted) ?? wanted;
-}
-
-/**
- * The collection in blocks of `size` additions, oldest first: how many creators
- * made their first appearance in each, and how many of the block's items came
- * from them. The newest block may be partial.
- */
-export function blocks(analysis: Analysis, size: number): Block[] {
-  const total = analysis.items.length;
-  const result: Block[] = [];
-  const firstBlock = new Map<string, number>();
-  for (let chrono = 0; chrono < total; chrono++) {
-    const entry = analysis.items[total - 1 - chrono];
-    const number = Math.floor(chrono / size);
-    if (!result[number]) {
-      result[number] = { number, start: entry.index, end: entry.index, items: 0, newCreators: 0, newCreatorItems: 0 };
-    }
-    const block = result[number];
-    block.start = entry.index;
-    block.items++;
-    if (!firstBlock.has(entry.creatorKey)) {
-      firstBlock.set(entry.creatorKey, number);
-      block.newCreators++;
-    }
-    if (firstBlock.get(entry.creatorKey) === number) block.newCreatorItems++;
-  }
-  return result;
-}
-
 /** What the collection is "of", for "177 videos collected". */
 export function itemNoun(items: Pick<MediaItem, 'type'>[]): string {
   const kinds = new Set(items.map(item => item.type));

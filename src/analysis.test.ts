@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { MediaItem } from './api.js';
 import {
-  additionsAgo, analyse, blockSize, blocks, collectionTitle, itemNoun, medianGap,
+  additionsAgo, analyse, collectionTitle, itemNoun, medianGap,
   previousFromCreator, snippet, thumbUrl, topShare,
 } from './analysis.js';
 
@@ -40,21 +40,6 @@ describe('analyse', () => {
     expect(topShare(analysis, 5)).toBe(1);
     expect(medianGap(analysis.ranked[0])).toBe(2);
     expect(medianGap(analysis.ranked[2])).toBeNull();
-  });
-});
-
-describe('blocks', () => {
-  it('counts first appearances oldest first, with a partial newest block', () => {
-    const result = blocks(analyse(sample()), 4);
-    expect(result.map(b => [b.items, b.newCreators, b.newCreatorItems])).toEqual([[4, 3, 4], [2, 0, 0]]);
-    expect(result[0]).toMatchObject({ end: 5, start: 2 });
-    expect(result[1]).toMatchObject({ end: 1, start: 0 });
-  });
-
-  it('picks a round size for at most 40 bars', () => {
-    expect(blockSize(30)).toBe(10);
-    expect(blockSize(401)).toBe(20);
-    expect(blockSize(9000)).toBe(250);
   });
 });
 
