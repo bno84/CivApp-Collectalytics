@@ -21,6 +21,8 @@ snippet to paste into Civitai. It is a port of the Collectalytics tab of
   Edits are kept per collection for the next visit.
 - **Opened before:** the last 8 public collections opened by link, to open
   again in one click or forget.
+- **Picks up where you left off:** the collection open last time opens again.
+  If it no longer reads, your first collection opens instead.
 
 Links open on Civitai in a new tab through the host.
 
@@ -34,16 +36,17 @@ get no consent prompt.
 - `GET /api/v1/blocks/collections?mode=mine`: the viewer's own collections.
 - `GET /api/v1/blocks/collections/{id}`: any public collection, page by page.
 
-`apps:storage` reaches two **private** collections of Civitai's document store,
+`apps:storage` reaches three **private** collections of Civitai's document store,
 declared under `storage` in the manifest. Only the viewer who wrote them can
 read them:
 
 - `snippets`: an edited stats snippet, keyed `c-<collectionId>`. Reset deletes it.
 - `recent_collections`: collections opened by link (id, name, curator), keyed
   `c-<collectionId>`, newest first by `updatedAt`, pruned to 8.
+- `prefs`: the collection open last, as `{ id }` under the key `last`.
 
 The store works only once the app is approved. Before that, and in a dev-tunnel
-preview, the server refuses it, and the app keeps both for the visit only.
+preview, the server refuses it, and the app keeps everything for the visit only.
 Collection names allow only `[a-z0-9_]`. Renaming one, or changing its
 visibility, starts it empty.
 
@@ -61,7 +64,7 @@ API, which changes what can be counted:
 | Follower count, total video length | Not shown | Not in the block API |
 | Review queue, accept with a thanks comment | Not ported | No app scope can accept collection items or post comments |
 | Image detail dialog | Opens the image on Civitai | Preferred: Civitai's own image page |
-| Snippet edits and last-opened collection remembered | Snippet edits remembered; collections opened by link listed under "Opened before" | Kept in the viewer's private app storage on Civitai. The app does not reopen the last collection by itself |
+| Snippet edits and last-opened collection remembered | Both remembered, plus collections opened by link listed under "Opened before" | Kept in the viewer's private app storage on Civitai |
 
 Contest-mode collections open like any other, as a known quirk. Civitai serves
 them shuffled, so order-based figures (recent picks, "additions ago") do not

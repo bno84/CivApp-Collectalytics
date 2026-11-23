@@ -52,6 +52,15 @@ describe('createMemory', () => {
     expect((await visit().recent()).map(item => item.id)).toEqual([2]);
   });
 
+  it('brings back the collection open last, the latest of several', async () => {
+    const { visit } = visits();
+    expect(await visit().lastOpened()).toBeNull();
+    const first = visit();
+    await Promise.all([first.setLastOpened(101), first.setLastOpened(201), first.setLastOpened(102)]);
+    expect(await first.lastOpened()).toBe(102);
+    expect(await visit().lastOpened()).toBe(102);
+  });
+
   it('only keeps things for the visit when the store refuses', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const refusing = createFakeStorage({ manifest, appStatus: 'pending' });
@@ -59,7 +68,9 @@ describe('createMemory', () => {
 
     await memory.saveSnippet(201, settings);
     await memory.remember(entry(201));
+    await memory.setLastOpened(201);
     expect(await memory.snippet(201)).toEqual(settings);
+    expect(await memory.lastOpened()).toBe(201);
     expect(await memory.recent()).toEqual([entry(201)]);
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();

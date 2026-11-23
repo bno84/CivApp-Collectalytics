@@ -81,8 +81,12 @@ function Collectalytics({ api, memory }: { api: ApiClient; memory: Memory }) {
     return () => { live = false; };
   }, [memory]);
 
-  /** `byLink`: the viewer named this collection, so it joins the recent list once it reads. */
-  const open = useCallback(async (id: number, byLink = false) => {
+  /**
+   * `byLink`: the viewer named this collection, so it joins the recent list once
+   * it reads. `fallback`: what to open instead if it cannot be read, for the
+   * remembered collection on load, which may have gone private or away since.
+   */
+  const open = useCallback(async (id: number, { byLink = false, fallback }: { byLink?: boolean; fallback?: number } = {}) => {
     chosen.current = true;
     reading.current?.abort();
     const controller = new AbortController();
@@ -97,6 +101,7 @@ function Collectalytics({ api, memory }: { api: ApiClient; memory: Memory }) {
       if (controller.signal.aborted) return;
       const analysis = analyse(data.items);
       setReport({ status: 'ready', data, analysis });
+      memory.setLastOpened(id);
       if (byLink) {
         const { name, curator } = data.collection;
         memory.remember({ id, name, curator: curator.username });
@@ -106,6 +111,7 @@ function Collectalytics({ api, memory }: { api: ApiClient; memory: Memory }) {
       setCreatorKey(analysis.items[0]?.creatorKey ?? null);
     } catch (error) {
       if (controller.signal.aborted) return;
+      if (fallback != null) return void open(fallback);
       setReport({ status: 'error', id, message: error instanceof Error ? error.message : String(error) });
     }
   }, [api, memory]);
@@ -120,18 +126,25 @@ function Collectalytics({ api, memory }: { api: ApiClient; memory: Memory }) {
     const controller = new AbortController();
     listing.current = controller;
     setMineError(null);
+    // Read alongside the list: on load, the collection open last time comes first.
+    const last = memory.lastOpened();
+    let first: number | undefined;
     try {
       const { collections, complete } = await readMyCollections(api, controller.signal);
       if (controller.signal.aborted) return;
       setMine(collections);
       setMineComplete(complete);
-      if (!chosen.current && collections[0]) open(collections[0].id);
+      first = collections[0]?.id;
     } catch (error) {
       if (controller.signal.aborted) return;
       setMine([]);
       setMineError(error instanceof Error ? error.message : String(error));
     }
-  }, [api, open]);
+    const remembered = await last;
+    if (controller.signal.aborted || chosen.current) return;
+    if (remembered != null) open(remembered, { fallback: remembered === first ? undefined : first });
+    else if (first != null) open(first);
+  }, [api, memory, open]);
 
   useEffect(() => {
     loadMine();
@@ -163,14 +176,14 @@ function Collectalytics({ api, memory }: { api: ApiClient; memory: Memory }) {
             disabled={!options.length}
             onChange={value => open(Number(value))}
           />
-          <form className="ca-link-form" onSubmit={event => { event.preventDefault(); if (linkId) { open(linkId, true); setLinkText(''); } }}>
+          <form className="ca-link-form" onSubmit={event => { event.preventDefault(); if (linkId) { open(linkId, { byLink: true }); setLinkText(''); } }}>
             <TextInput label="Or any public collection" placeholder="Paste a collection link or ID" value={linkText}
               onChange={event => setLinkText(event.currentTarget.value)} />
             <Button type="submit" variant="light" disabled={!linkId || busy}>Open</Button>
           </form>
           {recentOthers.length > 0 && (
             <RecentLinks entries={recentOthers} selected={selected} disabled={busy}
-              onOpen={id => open(id, true)} onForget={forget} />
+              onOpen={id => open(id, { byLink: true })} onForget={forget} />
           )}
         </div>
         {mineError && <Alert color="error" title="Could not list your collections">{mineError}</Alert>}

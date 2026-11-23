@@ -1,6 +1,6 @@
-// What the app remembers for a viewer between visits: their edited stats
-// snippets and the public collections they opened by link. It lives in two
-// private collections of Civitai's document store (see block.manifest.json),
+// What the app remembers for a viewer between visits: the collection they had
+// open, their edited stats snippets and the public collections they opened by
+// link. It lives in private collections of Civitai's document store (see block.manifest.json),
 // which only that viewer can read.
 //
 // Remembering is a convenience, never a requirement. Every read and write is
@@ -28,6 +28,9 @@ export interface Memory {
   /** Put a collection at the front of the recent list. */
   remember(entry: RecentCollection): Promise<void>;
   forget(id: number): Promise<void>;
+  /** The collection open when the viewer last left, or `null`. */
+  lastOpened(): Promise<number | null>;
+  setLastOpened(id: number): Promise<void>;
 }
 
 /** How many collections opened by link are kept. */
@@ -72,9 +75,13 @@ export function createMemory(storage: DocumentStorage | Promise<DocumentStorage 
   }).then(client => client && {
     snippets: client.collection<SnippetSettings>('snippets'),
     recent: client.collection<RecentCollection>('recent_collections'),
+    prefs: client.collection<{ id: number }>('prefs'),
   });
   const snippetStore = () => stores.then(found => found?.snippets ?? null);
   const recentStore = () => stores.then(found => found?.recent ?? null);
+  const prefsStore = () => stores.then(found => found?.prefs ?? null);
+  let last: number | null | undefined;
+  let lastWrite = Promise.resolve();
 
   async function loadRecent(): Promise<RecentCollection[]> {
     const store = await recentStore();
@@ -154,6 +161,37 @@ export function createMemory(storage: DocumentStorage | Promise<DocumentStorage 
       } catch (error) {
         warn('forget the collection', error);
       }
+    },
+
+    async lastOpened() {
+      if (last !== undefined) return last;
+      const store = await prefsStore();
+      let stored: number | null = null;
+      try {
+        const id = (await store?.get('last'))?.data.id;
+        stored = Number.isSafeInteger(id) && id! > 0 ? id! : null;
+      } catch (error) {
+        warn('read the last opened collection', error);
+      }
+      // A collection opened while this read was in flight is newer.
+      if (last === undefined) last = stored;
+      return last;
+    },
+
+    async setLastOpened(id) {
+      if (last === id) return;
+      last = id;
+      // One write at a time, in order, so the last one wins.
+      lastWrite = lastWrite.then(async () => {
+        const store = await prefsStore();
+        if (!store || last !== id) return;
+        try {
+          await store.put('last', { id });
+        } catch (error) {
+          warn('remember the open collection', error);
+        }
+      });
+      await lastWrite;
     },
   };
 }
