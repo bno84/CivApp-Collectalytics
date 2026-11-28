@@ -110,9 +110,24 @@ items into added by the owner, a collaborator, another account's pick, the
 artist themselves, or unknown. Coloring the per-day chart by that split also
 needs item 1.
 
+### 8. Rejected items for owners and managers
+
+**Today:** `GET /blocks/collections/{id}` serves accepted items only. Discovery
+reads rejections from tRPC (`collection.getAllCollectionItems` with
+`statuses: ["REJECTED"]`, `forReview: true`), which apps can't reach.
+
+**Want:** a `status=rejected` option on the same list route, with
+`rejectionReason`, `addedAt`, the creator, and `addedBy` (item 7) on each item.
+Answer 403 to anyone but the owner and managers, as tRPC does. Read only.
+
+**Why:** Discovery shows how many submissions are rejected and each
+submitter's acceptance rate. Picking an account lists their accepted and
+rejected items, with the reason on each rejected one. Without this and item 7,
+none of that can be built.
+
 ## Lower priority
 
-### 8. Clipboard in the app frame
+### 9. Clipboard in the app frame
 
 **Today:** whether `navigator.clipboard` works depends on the host frame's
 permissions policy. The app falls back to selecting and `execCommand('copy')`.
