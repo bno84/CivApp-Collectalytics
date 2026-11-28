@@ -90,9 +90,29 @@ comment.
 **Why:** Discovery's review panel accepted submissions with a thanks comment
 that mentioned the submitter. It was the biggest time saver for curators.
 
+### 7. Who added each item
+
+**Today:** items carry the artwork's creator, but not who added them, and
+the collection has no collaborators. Discovery gets both from tRPC
+(`collection.getUserCollectionItemsByItem`, `collection.getById`), which
+apps can't reach.
+
+**Want:** `addedBy: { userId, username }` on each item of
+`GET /blocks/collections/{id}`, and `collaborators` on the collection. Fill
+them only where `getUserCollectionItemsByItem` would answer the viewer, so
+for the owner, collaborators and followers of collections that take
+submissions, and send `null` otherwise. On the list itself, so the app
+needs no per-item lookups and no cache: Discovery makes one call per image.
+
+**Why:** curators want to see how much of a collection comes from
+submissions, and who submits. Discovery's "Who added the items" panel splits
+items into added by the owner, a collaborator, another account's pick, the
+artist themselves, or unknown. Coloring the per-day chart by that split also
+needs item 1.
+
 ## Lower priority
 
-### 7. Clipboard in the app frame
+### 8. Clipboard in the app frame
 
 **Today:** whether `navigator.clipboard` works depends on the host frame's
 permissions policy. The app falls back to selecting and `execCommand('copy')`.
